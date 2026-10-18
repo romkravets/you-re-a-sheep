@@ -1,0 +1,778 @@
+# You're a sheep: v1 Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Build v1 of «You're a sheep». It is a mobile-first static web experience in Ukrainian with five stages:
+1. A fake short-video feed that traps the user.
+2. A shattering transition.
+3. A "reality" stage with critical-thinking questions.
+4. An Animal-Farm-themed verdict.
+5. A way out: exit plan, retest, sharing.
+
+It also ships teacher, about and privacy pages.
+
+**Architecture:**
+- **Framework and pages.** Vite multi-page app built with Svelte 5 and TypeScript, no server.
+- **Pure logic.** All logic lives in pure TS modules under `src/lib/`, unit-tested with Vitest: content validation, session building, scoring, levels, history, share links.
+- **UI.** Svelte components under `src/` render a state machine (`src/app/Experience.svelte`).
+- **Content.** Lives in JSON under `content/uk/`, grouped into dated episodes, and is validated by a schema test.
+- **Generated files.** Build-time scripts generate per-level share-preview pages and the teacher PDF.
+
+**Tech Stack:**
+- Node 24, Vite 8, Svelte 5.57, `@sveltejs/vite-plugin-svelte` 7, TypeScript 5.
+- GSAP 3.15 (Observer, SplitText), `d3-delaunay` 6.
+- `@fontsource/literata` and `@fontsource/unbounded` 5.3.
+- Vitest 5, `@playwright/test` 1.64, Lighthouse CI.
+- `marked` 18 for page copy.
+- GoatCounter for analytics.
+- GitHub Pages via GitHub Actions.
+
+**Spec:** `docs/superpowers/specs/2026-10-18-you-re-a-sheep-design.md`. Read it first. Section numbers (§) below refer to it.
+
+## Global Constraints
+
+- **Language and tone.** All user-facing copy is Ukrainian. Tone: bold, honest, slightly insulting, never humiliating for its own sake (§2). The «Ворог у стрічці» items are serious in tone, with no jokes about casualties or shelling (§3).
+- **No AI-generated images**, anywhere (§8).
+- **No personal data.** No accounts, no cookies, nothing sent except anonymous GoatCounter counters (§1, §7).
+- **No server at runtime.** The output is a static `dist/` (§10).
+- **First screen is the feed.** No intro, no rules, no "start" button. The project name appears only at the end (§3).
+- **Run budget.**
+  - Round 1: 8 clips and 3 questions.
+  - Round 2: 6 clips and 2 questions.
+  - Round 3: 5 questions. Two are mandatory, of types `farm` and `enemy`. Three are random from the other round-3 types.
+  - About 10 questions in total, 3–4 min (§3).
+- **Content pool minimums** (§3):
+  - 6 questions per round-3 type;
+  - 3 clip sets per feed round.
+- **Vanishing text** lasts at most 30 s, with a «мені потрібно більше часу» button that does not penalise but is noted in the verdict (§3).
+- **Level thresholds** (% «думаю сам»): Вівця 0–29, Моллі 30–49, Боксер 50–69, Бенджамін 70–89, Орвелл 90–100 (§4).
+- **Orwell quotes:** only short quotes, in our own translation from the English original. Never reproduce existing Ukrainian translations (§4).
+- **Facts.** Every fact or number shown comes from `content/uk/facts.json` with a source URL. Never use the "goldfish 8 seconds" myth (§6).
+- **Fakes.**
+  - Fake "news" in feed traps and round-3 items are invented: no real names, media or brands.
+  - `enemy` items are real, already-debunked fakes, each with a debunk URL. They get a «ФЕЙК» label after the answer.
+  - "True" items are real verified facts with a source URL (§1, §3).
+- **Accessibility.** Respect `prefers-reduced-motion` everywhere (§8). Full keyboard control on desktop: ↑/↓/Space/wheel for the feed, 1–3 and Enter for answers (§8).
+- **Partner links** are labelled «партнерське посилання». None exist in v1 (§12).
+- **Clips:** every clip has a license record. The release check fails while any clip is `placeholder` (§3, §11).
+- **Disclaimer.** «Це не IQ-тест. Це дзеркало.» appears on the verdict and on the about page (§1).
+
+## Review Focus
+
+1. **`localStorage` throws or is empty** (private mode, blocked storage). The test still runs end to end, there is no retest prompt, and nothing crashes. Pinned in Task 5 (`history.test.ts › survives throwing storage`).
+2. **Tampered or garbage share link** (`/c/xyz/?p=abc`, `?p=999`, `?p=-5`). The friend banner is hidden or clamped, and the test starts normally. Pinned in Task 6 (`share-link.test.ts › rejects garbage`).
+3. **A clip fails to load or autoplay is blocked** (bad network, iOS Low Power Mode). The poster frame shows, the feed keeps advancing on its timer, and nothing hangs. Pinned in Task 8 (`feed.spec.ts › video failure falls back to poster`).
+4. **Reload or the browser Back button mid-test.** Reload restarts cleanly from the feed with no stale half-state. Back on a question screen does not leave the site. Pinned in Task 11 (`flow.spec.ts › reload restarts cleanly`).
+5. **`prefers-reduced-motion: reduce`.** The shatter becomes a crossfade, the character's breathing stops, and the vanishing text still gives the "more time" option. Pinned in Task 9 (`crack.spec.ts › reduced motion crossfades`).
+
+---
+
+## File Structure
+
+```
+index.html                         app entry (feed is first paint)
+teacher/index.html                 teacher page entry
+about/index.html                   about page entry
+privacy/index.html                 privacy page entry
+vite.config.ts                     multi-page config, BASE_PATH, preview-pages plugin
+playwright.config.ts               mobile (Pixel 7) + desktop projects
+lighthouserc.json                  perf budget
+scripts/gen-preview-pages.ts       writes dist/c/<levelId>/index.html with OG tags
+scripts/gen-teacher-pdf.ts         prints teacher page to dist/teacher/lesson.pdf
+scripts/release-check.ts           fails on placeholder clips / missing credits
+scripts/make-placeholder-clips.sh  ffmpeg: generates labelled placeholder clips
+.github/workflows/deploy.yml       test → build → Pages
+content/uk/ui.json                 interface strings
+content/uk/levels.json             5 levels: copy, slogan, challenge line, exit plan
+content/uk/facts.json              verified facts with sources
+content/uk/pages/{teacher,about,privacy}.md
+content/uk/episodes/2026-10-base.json   clip sets + question pool
+content/credits.json               every clip/engraving/font: source, url, license
+public/clips/*.{webm,mp4,jpg}      clips + posters
+public/og/<levelId>.png            share-preview images (1200×630)
+src/main.ts                        mounts Experience
+src/pages/{teacher,about,privacy}.ts  mount Page.svelte with md
+src/styles/tokens.css              design system tokens (neon, paper, poster)
+src/styles/base.css
+src/lib/types.ts                   content + runtime types
+src/lib/content.ts                 loadContent(), validateContent()
+src/lib/rng.ts                     mulberry32 seeded RNG, shuffle, pick
+src/lib/session.ts                 buildSession()
+src/lib/score.ts                   scoreRun(), sheepMeter()
+src/lib/levels.ts                  levelFor()
+src/lib/history.ts                 safe storage, results, seen ids, challenge
+src/lib/share-link.ts              encode/decode friend links
+src/lib/analytics.ts               track()
+src/lib/storycard.ts               drawStoryCard(), shareOrDownload()
+src/lib/motion.ts                  prefersReducedMotion(), gsap registration
+src/app/Experience.svelte          stage state machine
+src/app/SheepMeter.svelte
+src/app/FriendBanner.svelte
+src/feed/Feed.svelte  FeedClip.svelte  feed-input.ts  preload.ts
+src/crack/Crack.svelte  shards.ts
+src/quiz/QuestionScreen.svelte  Explanation.svelte
+src/quiz/materials/{Telegram,Schedule,Article,Chat,VanishingText}.svelte
+src/verdict/{Reveal,Verdict,ExitPlan,Challenge,Facts,ShareActions}.svelte
+src/art/Character.svelte           renders engraving + breathing
+src/art/engravings/<levelId>.svg|png
+src/pages/Page.svelte              paper-styled markdown page
+tests/unit/*.test.ts
+tests/e2e/*.spec.ts
+tests/fixtures/content.min.json    tiny valid content for unit tests
+```
+
+## Shared types (defined in Task 2, used everywhere)
+
+```ts
+// src/lib/types.ts
+export type LevelId = 'sheep' | 'molly' | 'boxer' | 'benjamin' | 'orwell';
+export type Round3Type = 'fake-or-true' | 'answer-in-front' | 'headline-vs-text'
+  | 'herd' | 'motive' | 'close-reading' | 'farm' | 'enemy';
+export type QuestionType = 'recall' | Round3Type;
+export type TrapKind = 'fake' | 'clickbait' | 'ad' | 'real';
+
+export interface Source { label: string; url: string }
+export interface License { source: string; url: string; license: string } // license 'placeholder' allowed only pre-release
+
+export interface Clip {
+  id: string; webm: string; mp4: string; poster: string;
+  handle: string; caption: string; likes: string; comments: string; shares: string;
+  overlay?: string;            // on-clip text (fake headline, small print…)
+  trap?: TrapKind;
+  license: License;
+}
+export interface ClipSet { id: string; round: 1 | 2; clips: Clip[]; questionIds: string[] }
+
+export type Material =
+  | { kind: 'telegram'; channel: string; text: string; views: string; time: string }
+  | { kind: 'schedule'; queue: string; slots: { from: string; to: string; on: boolean }[]; chat: string[]; now: string }
+  | { kind: 'article'; headline: string; body: string }
+  | { kind: 'text'; body: string; vanishSeconds: number };
+
+export interface Option { id: 'a' | 'b' | 'c' | 'd'; text: string }
+export interface Question {
+  id: string; type: QuestionType; prompt: string; material?: Material;
+  options: Option[]; correct: Option['id'];
+  explanation: string;        // shown after answer
+  verdictLine: string;        // shown in verdict if wrong, e.g. «Ти пішов за натовпом.»
+  herd?: { option: Option['id']; percent: number };  // fake crowd hint (type 'herd')
+  source?: Source;            // required for 'enemy' and for 'fake-or-true' when the true answer is "правда"
+  fakeLabel?: boolean;        // 'enemy': show «ФЕЙК» after answer
+}
+export interface Episode { id: string; date: string; clipSets: ClipSet[]; questions: Question[] }
+
+export interface ExitPlan { read: { title: string; author: string; url?: string }[]; watch: Source[]; write: string; doIt: string; grow: Source[] }
+export interface Level { id: LevelId; name: string; emoji: string; min: number; max: number;
+  description: string; slogan: string; challengeLine: string; exitPlan: ExitPlan; quote?: string }
+export interface Fact { id: string; text: string; source: Source; note?: string }
+export interface Content { ui: Record<string, string>; levels: Level[]; facts: Fact[]; episodes: Episode[] }
+
+// runtime
+export type FeedEvent = { kind: 'like' | 'share'; clipId: string } | { kind: 'dwell'; clipId: string; ms: number };
+export interface Answer { questionId: string; chosen: Option['id']; moreTime?: boolean }
+export interface SessionRound { kind: 'feed'; clipSet: ClipSet; questions: Question[] }
+export interface RealityRound { kind: 'reality'; questions: Question[] }
+export interface Session { seed: number; rounds: [SessionRound, SessionRound, RealityRound] }
+export interface RunResult { percent: number; level: LevelId; verdictLines: string[]; at: string /* ISO */ }
+```
+
+---
+
+### Task 1: Scaffold, design tokens, CI
+
+**Files:**
+- Create: `package.json`, `vite.config.ts`, `svelte.config.js`, `tsconfig.json`, `index.html`, `teacher/index.html`, `about/index.html`, `privacy/index.html`, `src/main.ts`, `src/styles/tokens.css`, `src/styles/base.css`, `playwright.config.ts`, `.github/workflows/deploy.yml`, `tests/e2e/smoke.spec.ts`, `tests/unit/smoke.test.ts`
+- Modify: `.gitignore` (add `node_modules/`, `dist/`, `test-results/`, `playwright-report/`)
+
+**Interfaces:**
+- Produces:
+  - npm scripts `dev`, `build`, `test` (vitest run), `e2e` (playwright), `check` (svelte-check), `release-check`;
+  - CSS custom properties in `tokens.css`, listed in step 3.
+
+- [ ] **Step 1:** Write `tests/e2e/smoke.spec.ts`. Load `/` and expect `document.documentElement.lang === 'uk'`. Load `/teacher/`, `/about/` and `/privacy/` and expect HTTP 200 for each. Write `tests/unit/smoke.test.ts` with `expect(1).toBe(1)`. This only proves the runner works.
+- [ ] **Step 2:** Run `npx playwright test smoke` and expect it to FAIL, because there is no server yet.
+- [ ] **Step 3:** Set up the project.
+  - Install `svelte@5`, `vite@8`, `@sveltejs/vite-plugin-svelte@7`, `typescript`, `svelte-check`, `gsap@3.15`, `d3-delaunay@6`, `@fontsource/literata`, `@fontsource/unbounded`, `marked@18`, `vitest@5`, `@playwright/test@1.64`, `tsx`, `@lhci/cli`.
+  - `vite.config.ts`:
+    - `base: process.env.BASE_PATH ?? '/'`;
+    - `build.rollupOptions.input` = the 4 HTML entries;
+    - Vitest `include: ['tests/unit/**/*.test.ts']`.
+  - `playwright.config.ts`:
+    - `webServer` runs `npm run build && npx vite preview --port 4173`;
+    - projects `mobile` (devices['Pixel 7']) and `desktop` (1440×900).
+  - `tokens.css` defines:
+    - neon: `--neon-pink #ff2d8a`, `--neon-violet #6b2bff`, `--neon-cyan #00e5ff`, `--feed-bg #000`, `--feed-ui #fff`;
+    - paper: `--paper #f2ede3`, `--paper-deep #e9e1d1`, `--ink #161616`, `--ink-soft #4a443b`, `--rule rgba(22,22,22,.18)`;
+    - poster: `--poster-red #c8241c`, `--poster-cream #efe4cf`, `--poster-black #1a1a1a`;
+    - type: `--font-book 'Literata', Georgia, serif`, `--font-poster 'Unbounded', system-ui`, `--font-feed system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif`.
+
+    Import Literata 400/700/400-italic and Unbounded 400/900 with the Cyrillic subsets only.
+  - `base.css`:
+    - `html{lang}` is set in the HTML;
+    - `body{margin:0;background:var(--feed-bg)}`;
+    - `@media (prefers-reduced-motion: reduce){*{animation-duration:.001ms!important;transition-duration:.001ms!important}}`.
+  - Every HTML entry: `<html lang="uk">`, a viewport meta with `viewport-fit=cover`, and `<meta name="theme-color" content="#000">`.
+  - `deploy.yml`:
+    - on push to `main`: `npm ci`, `npm test`, `npx playwright install --with-deps chromium`, `npm run e2e`, `BASE_PATH=/you-re-a-sheep/ npm run build` (use `/` when a repo variable `CUSTOM_DOMAIN` is set; then also write `dist/CNAME`), then `actions/upload-pages-artifact` + `actions/deploy-pages`.
+- [ ] **Step 4:** Run `npm test && npx playwright test smoke`. Expect PASS on both projects.
+- [ ] **Step 5:** Commit: `chore: scaffold vite+svelte app, tokens, CI`.
+
+### Task 2: Content types, validator, loader
+
+**Files:**
+- Create: `src/lib/types.ts` (exactly as in **Shared types**), `src/lib/content.ts`, `tests/fixtures/content.min.json`, `tests/unit/content.test.ts`
+
+**Interfaces:**
+- Produces:
+  - `validateContent(c: Content, opts?: { release?: boolean; minimums?: boolean }): string[]`. Returns a list of human-readable errors; empty means valid.
+  - `loadContent(): Content`. Imports `content/uk/*.json` and all `content/uk/episodes/*.json` via `import.meta.glob(..., { eager: true })`.
+
+- [ ] **Step 1:** Write the tests in `content.test.ts`. The fixture is a minimal valid `Content` with 1 clip set per round and 1 question per type.
+  - `fixture is valid`: `validateContent(fixture)` equals `[]`.
+  - `correct must be an option`: change one question's `correct` to `'d'` when there are only 3 options. Errors contain `q:<id> correct "d" not in options`.
+  - `enemy needs source and fakeLabel`: errors contain `q:<id> enemy requires source.url` and `q:<id> enemy requires fakeLabel`.
+  - `clip set questionIds must exist`: an unknown id gives `clipset:<id> unknown question <qid>`. A question may be bound to at most one clip set (`q:<id> bound to multiple clip sets`).
+  - `round 1 sets need 8 clips and ≥3 questions; round 2 sets need 6 clips and ≥2`.
+  - `levels cover 0–100 contiguously`: change molly's `min` to 31 and expect `levels gap at 30`.
+  - `vanishSeconds ≤ 30`.
+  - `herd hint must point to a wrong option`.
+  - `minimums` with `{ minimums: true }`: the fixture gives errors `type herd has 1 questions, need 6` and `round 1 has 1 clip sets, need 3`.
+  - `release` with `{ release: true }`: a clip whose `license.license === 'placeholder'` gives `clip:<id> placeholder license`.
+  - `real content passes minimums`: `validateContent(loadContent(), { minimums: true })` equals `[]`. Mark it `it.skip` until Task 15, which removes the skip.
+- [ ] **Step 2:** Run `npx vitest run content` and expect FAIL (the module is missing).
+- [ ] **Step 3:** Implement `validateContent` as plain checks, one per rule above, using the exact message formats. Implement `loadContent`, which merges the episodes.
+- [ ] **Step 4:** Run `npx vitest run content` and expect PASS, with 1 skipped.
+- [ ] **Step 5:** Commit: `feat: content schema and validator`.
+
+### Task 3: Seeded RNG and session builder
+
+**Files:**
+- Create: `src/lib/rng.ts`, `src/lib/session.ts`, `tests/unit/session.test.ts`
+
+**Interfaces:**
+- Consumes: the types from Task 2.
+- Produces:
+  - `makeRng(seed: number): () => number`. mulberry32, returns [0,1).
+  - `shuffle<T>(xs: readonly T[], rnd: () => number): T[]`
+  - `buildSession(content: Content, seed: number, seenQuestionIds?: ReadonlySet<string>): Session`
+
+- [ ] **Step 1:** Write the tests, using the Task 2 fixture extended in-test to 3 sets per round and 6 questions per type.
+  - `deterministic`: the same seed gives a deep-equal session.
+  - `round shapes`: round 0 has 8 clips and 3 questions. Round 1 has 6 clips and 2 questions. Round 2 has exactly 5 questions.
+  - `feed questions belong to their set`: every round-0/1 question id is in `clipSet.questionIds`.
+  - `round 3 always has farm and enemy`: over 200 seeds, each reality round has exactly one `farm`, exactly one `enemy`, and 3 others with 3 distinct types, none of them `farm`, `enemy` or `recall`.
+  - `bound questions never appear in round 3`: over 200 seeds, no reality-round question id is in any `clipSet.questionIds`.
+  - `prefers unseen`: if `seenQuestionIds` contains all but one `farm` question, that unseen one is chosen. If all are seen, the builder falls back to any.
+  - `options shuffled but correct preserved`: the option order differs across seeds, and `correct` still points to the same text.
+- [ ] **Step 2:** Run `npx vitest run session` and expect FAIL.
+- [ ] **Step 3:** Implement:
+  1. Pick a clip set per round with `rnd`, preferring sets whose questions are unseen.
+  2. Take that set's first N questions in shuffled order (N is 3 for round 1 and 2 for round 2).
+  3. Round 3: pick one `farm` and one `enemy`, then 3 other distinct round-3 types, one question each. Draw only from questions **not bound to any clip set** (bound questions belong to the feed). Prefer unseen.
+  4. Shuffle the option order per question.
+- [ ] **Step 4:** Run `npx vitest run session` and expect PASS.
+- [ ] **Step 5:** Commit: `feat: seeded session builder`.
+
+### Task 4: Scoring and levels
+
+**Files:**
+- Create: `src/lib/score.ts`, `src/lib/levels.ts`, `tests/unit/score.test.ts`
+
+**Interfaces:**
+- Produces:
+  - `scoreRun(session: Session, answers: Answer[], feedEvents: FeedEvent[], content: Content): RunResult`
+  - `sheepMeter(session: Session, answers: Answer[], feedEvents: FeedEvent[]): number`. Returns 0–100; it rises with mistakes so far.
+  - `levelFor(percent: number, levels: Level[]): Level`
+
+**Scoring rules (decided here):**
+- Each question is worth 10 points.
+- Penalties:
+  - −5 for a `share` on a clip whose `trap` is `fake`, `clickbait` or `ad`;
+  - −3 for a `like` on such a clip;
+  - each penalty counts once per clip.
+- Formula: `percent = clamp(round((points - penalties) / (10 × questionCount) × 100), 0, 100)`.
+- `verdictLines`, in this order:
+  1. the `verdictLine` of each wrong answer;
+  2. «Ти переслав фейк.» for a share on a `fake` trap;
+  3. «Ти лайкнув клікбейт.» for a like on `clickbait`;
+  4. «Ти завис на клікбейті.» when dwell is ≥ 3000 ms on a `clickbait` or `ad` clip;
+  5. «Тобі знадобилось більше часу на читання.» if any answer has `moreTime`.
+
+  Deduplicate, max 4 lines.
+- `sheepMeter = round(100 × (lostPoints + penalties) / (10 × answeredSoFar || 1))`, clamped to 0–100.
+
+- [ ] **Step 1:** Write the tests:
+  - `all correct, no events → 100, orwell`;
+  - `all wrong → 0, sheep`;
+  - `share on fake costs 5 and adds line`: 10/10 correct and one fake share gives 95 and «Ти переслав фейк.»;
+  - `penalty counted once per clip`: two shares on the same fake clip give 95;
+  - `like on real trap costs nothing`;
+  - `moreTime adds line but no penalty`;
+  - `verdict lines capped at 4 and ordered as specified`;
+  - `levelFor boundaries`: 29→sheep, 30→molly, 49→molly, 50→boxer, 69→boxer, 70→benjamin, 89→benjamin, 90→orwell, 100→orwell, and −3 clamps to sheep;
+  - `sheepMeter starts at 0 and is 100 after one wrong answer`.
+- [ ] **Step 2:** Run `npx vitest run score` and expect FAIL.
+- [ ] **Step 3:** Implement as specified.
+- [ ] **Step 4:** Run `npx vitest run score` and expect PASS.
+- [ ] **Step 5:** Commit: `feat: scoring, verdict lines, levels`.
+
+### Task 5: History, retest and 7-day challenge (safe storage)
+
+**Files:**
+- Create: `src/lib/history.ts`, `tests/unit/history.test.ts`
+
+**Interfaces:**
+- Produces:
+  - `createHistory(storage?: Storage | null): History`. The default is `globalThis.localStorage`, wrapped in try/catch.
+  - The `History` interface:
+
+```ts
+interface History {
+  available: boolean;
+  lastResult(): RunResult | null;
+  saveResult(r: RunResult): void;          // keeps the last 10
+  firstResult(): RunResult | null;         // for "Було X → стало Y"
+  seenQuestionIds(): Set<string>;
+  markSeen(ids: string[]): void;           // keeps the last 200
+  retestDue(now: Date): boolean;           // last result ≥ 7 days old
+  challenge(): { startedAt: string; days: boolean[] } | null;  // 7 booleans
+  startChallenge(now: Date): void;
+  toggleDay(i: number): void;
+}
+```
+
+The storage key is `yas:v1`, holding a single JSON blob.
+
+- [ ] **Step 1:** Write the tests using an in-memory `Storage` fake:
+  - `save and read last/first result`;
+  - `retestDue false at 6d23h, true at 7d`;
+  - `seen ids capped at 200, newest kept`;
+  - `challenge toggles persist`;
+  - `survives throwing storage`: every Storage method throws. `available === false`, all reads return null or empty, writes do not throw;
+  - `survives corrupt JSON`: the stored value `'{oops'` gives `lastResult() === null`;
+  - `null storage`: `createHistory(null).available === false`.
+- [ ] **Step 2:** Run `npx vitest run history` and expect FAIL.
+- [ ] **Step 3:** Implement.
+- [ ] **Step 4:** Run `npx vitest run history` and expect PASS.
+- [ ] **Step 5:** Commit: `feat: safe local history, retest, challenge`.
+
+### Task 6: Friend links and share-preview pages
+
+**Files:**
+- Create: `src/lib/share-link.ts`, `scripts/gen-preview-pages.ts`, `tests/unit/share-link.test.ts`, `tests/unit/preview-pages.test.ts`
+- Modify: `vite.config.ts` (a plugin that runs `genPreviewPages` in `closeBundle`)
+
+**Interfaces:**
+- Consumes: `LevelId`, `Level` and `content/uk/levels.json`.
+- Produces:
+  - `friendUrl(origin: string, base: string, r: { level: LevelId; percent: number }): string`. Returns `${origin}${base}c/${level}/?p=${percent}`.
+  - `parseFriend(pathname: string, search: string, base: string): { level: LevelId; percent: number | null } | null`
+  - `genPreviewPages(distDir: string, base: string, levels: Level[], siteUrl: string): void`. Writes `dist/c/<id>/index.html`.
+
+- [ ] **Step 1:** Write the tests:
+  - `round trip`: parsing the output of `friendUrl('https://x.ua','/','boxer',73)` gives `{ level:'boxer', percent:73 }`;
+  - `works under base path /you-re-a-sheep/`;
+  - `rejects garbage`:
+    - unknown level `xyz` gives null;
+    - `?p=abc` gives `percent:null`;
+    - `?p=999` gives `percent:null`;
+    - `?p=-5` gives `percent:null`;
+    - `?p=73.5` gives 73;
+    - no `/c/` segment gives null;
+  - `preview page has OG tags`: running `genPreviewPages` on a temp dir, `c/boxer/index.html` contains `og:title` «У друга — Боксер. А ти?», `og:image` `${siteUrl}og/boxer.png`, `og:description` from `ui.json` key `og.description`, and a script that redirects to `${base}?from=boxer&p=` + the original `p` param via `location.replace`.
+- [ ] **Step 2:** Run `npx vitest run share-link preview-pages` and expect FAIL.
+- [ ] **Step 3:** Implement. The preview page is minimal static HTML, with the redirect done by an inline script and a `<noscript>` link. `siteUrl` comes from env `SITE_URL`, defaulting to `https://romkravets.github.io/you-re-a-sheep/`. The app reads `?from=&p=` on load through `parseFriend`-equivalent validation; add `parseFriendQuery(search)` to `share-link.ts` with the same rules and the same tests.
+- [ ] **Step 4:** Run `npx vitest run share-link preview-pages` and expect PASS.
+- [ ] **Step 5:** Commit: `feat: friend links and per-level preview pages`.
+
+### Task 7: Analytics wrapper
+
+**Files:**
+- Create: `src/lib/analytics.ts`, `tests/unit/analytics.test.ts`
+- Modify: `index.html`, `teacher/index.html`. Add the GoatCounter script tag only when `import.meta.env.VITE_GOATCOUNTER_CODE` is set, using Vite `transformIndexHtml` in `vite.config.ts`. Use `data-goatcounter-settings='{"no_onload":false}'` and the `//gc.zgo.at/count.js` src.
+
+**Interfaces:**
+- Produces: `track(event: AnalyticsEvent, data?: Record<string, string | number>): void`, where
+
+```ts
+type AnalyticsEvent = 'start' | 'round1-stop' | 'reality' | 'verdict' | `level-${LevelId}`
+  | 'share-card' | 'share-link' | 'retest' | 'retest-delta' | 'challenge-start' | 'from-teacher' | 'from-friend';
+```
+
+  It calls `window.goatcounter?.count({ path: 'event/' + name, title: JSON-free string, event: true })`. If the script is missing it is a no-op that never throws. `retest-delta` sends the path `event/retest-delta/<bucket>`, with buckets `-∞..-1`, `0`, `1-9`, `10-19`, `20+`.
+
+- [ ] **Step 1:** Write the tests:
+  - `no-op without goatcounter`;
+  - `calls count with event path`;
+  - `delta bucketing`: 0→`0`, 15→`10-19`, −4→`-∞..-1`, 33→`20+`;
+  - `never throws if count throws`.
+- [ ] **Step 2:** Run `npx vitest run analytics` and expect FAIL.
+- [ ] **Step 3:** Implement.
+- [ ] **Step 4:** Run `npx vitest run analytics` and expect PASS.
+- [ ] **Step 5:** Commit: `feat: anonymous analytics wrapper`.
+
+### Task 8: The feed (clips, swipe, actions, fallback)
+
+**Files:**
+- Create: `src/feed/Feed.svelte`, `src/feed/FeedClip.svelte`, `src/feed/feed-input.ts`, `src/feed/preload.ts`, `src/lib/motion.ts`, `scripts/make-placeholder-clips.sh`, `tests/unit/feed-input.test.ts`, `tests/e2e/feed.spec.ts`, `tests/e2e/feed-harness.html` (a dev-only entry that mounts `Feed` with fixture clips; include it in the Vite inputs only when `mode === 'test'`, and make the Playwright `webServer` build with `--mode test`)
+
+**Interfaces:**
+- Consumes: `ClipSet`, `FeedEvent`.
+- Produces:
+  - `<Feed clipSet onevent={(e: FeedEvent) => void} ondone={() => void} />`. `ondone` fires when the user swipes past the last clip **or** when the auto-advance total runs out: the clips auto-advance after 4.5 s each, so a passive user still finishes.
+  - `createFeedInput(el: HTMLElement, handlers: { next(): void; prev(): void }): () => void`. GSAP Observer: touch/pointer swipe with a 40 px threshold, wheel debounced to one step per gesture, keys ↑/↓/PageUp/PageDown/Space. Returns a cleanup function.
+  - `preloadNext(clips: Clip[], index: number): void`. Sets `preload="auto"` on the next 2 videos only.
+  - `prefersReducedMotion(): boolean` and `registerGsap()` in `motion.ts`.
+  - `make-placeholder-clips.sh <id> <hex> "<label>"`. Uses ffmpeg to produce a 4 s 720×1280 WebM (VP9, CRF 40) and MP4 (H.264, CRF 30), both silent, plus a JPG poster, all ≤ 300 KB, in `public/clips/`. The clip is a colour gradient with slow zoom and a large label.
+
+**UI requirements (§3, §8):**
+- Each clip is full-height 9:16 with `<video playsinline muted loop autoplay poster>`.
+- Overlays, in TikTok style:
+  - right rail: like, comment, share with counts;
+  - bottom: handle and caption;
+  - the `overlay` text box;
+  - the sound icon: the first tap unmutes.
+- Like and share toggle visually and emit a `FeedEvent`. Dwell is measured per clip and emitted on leave.
+- Desktop (≥ 900 px): a centred column with `height: 92vh; aspect-ratio: 9/16`. The background glow is a radial gradient that samples the clip's `--glow` colour; set it per clip from the poster's average colour, computed once into a CSS var on load via a 1×1 canvas.
+- A small, discreet hint, «↑ ↓ / коліщатко», only on desktop and only for the first clip.
+- If a video `error`s or `play()` rejects, keep the poster visible and continue the timer.
+
+- [ ] **Step 1:** Write the unit tests for `feed-input`:
+  - a synthetic pointer drag of −60 px calls `next`;
+  - −20 px calls nothing;
+  - ArrowDown calls `next`; ArrowUp calls `prev`;
+  - 5 wheel events within 300 ms call `next` once;
+  - cleanup removes the listeners.
+
+  Write `feed.spec.ts` (mobile and desktop):
+  - `swipe advances and emits like/share events`;
+  - `passive user reaches done in ≤ 8×4.5 s + 2 s`: use `page.clock` to fast-forward;
+  - `video failure falls back to poster`: route `**/*.webm` and `**/*.mp4` to abort. The poster `img` is visible, and the feed still reaches done;
+  - `desktop shows centred column and keyboard works`.
+- [ ] **Step 2:** Run `npx vitest run feed-input && npx playwright test feed` and expect FAIL.
+- [ ] **Step 3:** Implement the components, then generate the fixture placeholder clips with the script (8 clips, ids `ph-1`…`ph-8`).
+- [ ] **Step 4:** Run the same command and expect PASS.
+- [ ] **Step 5:** Commit: `feat: tiktok-style feed with input, actions, fallback`.
+
+### Task 9: Shatter transition
+
+**Files:**
+- Create: `src/crack/shards.ts`, `src/crack/Crack.svelte`, `tests/unit/shards.test.ts`, `tests/e2e/crack.spec.ts` (uses a `crack-harness.html` test entry, as in Task 8)
+
+**Interfaces:**
+- Produces:
+  - `makeShards(w: number, h: number, impact: { x: number; y: number }, count: number, rnd: () => number): { points: [number, number][]; centroid: [number, number] }[]`. Builds a Voronoi diagram via `d3-delaunay` with seeds biased towards the impact point: 60% of the seeds within 25% of `min(w,h)` of it.
+  - `<Crack source={HTMLElement} impact={{x,y}} ondone={() => void} variant="feed-to-paper" />`.
+    1. Snapshot the current feed frame: draw the visible `<video>`/poster and overlay onto a canvas. Overlay text is drawn as text, which is good enough.
+    2. Draw radial crack lines (120 ms).
+    3. Then shards fly out with GSAP: random rotation, translate away from the impact point, ease `power3.in`, 900 ms total, revealing the paper layer underneath.
+    4. With reduced motion: a 300 ms crossfade instead.
+    5. A short haptic `navigator.vibrate?.(30)`.
+
+**Count:** 28 shards on mobile, 44 on desktop. On desktop the column's shards fly across the whole viewport (§8).
+
+- [ ] **Step 1:** Write the tests:
+  - `shards cover the area`: the polygon areas sum to `w×h ± 1%`;
+  - `count respected`;
+  - `deterministic with seeded rnd`;
+  - `bias`: at least 50% of the centroids lie within `0.35×min(w,h)` of the impact point.
+
+  `crack.spec.ts`:
+  - `ondone fires within 1.5 s`;
+  - `reduced motion crossfades`: `page.emulateMedia({ reducedMotion: 'reduce' })`, no shard canvas appears, and done fires within 600 ms.
+- [ ] **Step 2:** Run `npx vitest run shards && npx playwright test crack` and expect FAIL.
+- [ ] **Step 3:** Implement.
+- [ ] **Step 4:** Run the same command and expect PASS.
+- [ ] **Step 5:** Commit: `feat: glass shatter transition`.
+
+### Task 10: Question screens, materials, sheep meter
+
+**Files:**
+- Create: `src/quiz/QuestionScreen.svelte`, `src/quiz/Explanation.svelte`, `src/quiz/materials/Telegram.svelte`, `Schedule.svelte`, `Article.svelte`, `Chat.svelte`, `VanishingText.svelte`, `src/app/SheepMeter.svelte`, `tests/e2e/quiz.spec.ts` (with a `quiz-harness.html` test entry)
+
+**Interfaces:**
+- Consumes: `Question`, `Material`, `Answer`.
+- Produces:
+  - `<QuestionScreen question theme={'feed-stop' | 'paper'} index total onanswer={(a: Answer) => void} />`. It shows the material and options. After the user picks, it shows `<Explanation>` and a «Далі →» button; `onanswer` fires on «Далі». There is no going back.
+  - `<SheepMeter value={0..100} theme />`.
+
+**UI requirements:**
+- `feed-stop` theme: black screen, white text, a red «🛑 Стоп.» kicker. It is used for the round 1/2 questions.
+- `paper` theme: book typography. On ≥ 900 px it is a two-page spread, with the material and an engraving vignette on the left and the prompt and options on the right. On mobile they stack.
+- Keys: 1–4 choose, Enter confirms «Далі».
+- `herd`: show `👥 {percent}%` beside the fake option. After the answer, the explanation must reveal «Цієї цифри не було — це пастка.» (append it automatically).
+- `enemy`: after the answer, a red «ФЕЙК» stamp over the material and a «Спростування: {source.label}» link (`target=_blank rel=noopener`).
+- `VanishingText`: the text fades out after `vanishSeconds`. Visible countdown. The «мені потрібно більше часу» button pauses the countdown and adds +30 s once; it sets `moreTime: true` in the answer. The question appears after the text vanishes or when the user taps «Я прочитав».
+- Explanation, wrong: «❌ Неправильно», shows the chosen and the correct option, then `explanation`.
+- Explanation, right: «✅ Так» plus `explanation`.
+- `SheepMeter`: a thin bar labelled «рівень вівці», with a GSAP tween on change. It is fixed at the top on mobile and top-left on desktop.
+
+- [ ] **Step 1:** Write `quiz.spec.ts`:
+  - `wrong answer shows correct option and explanation`;
+  - `keyboard 2 then Enter answers b`;
+  - `herd reveal line appended`;
+  - `enemy shows ФЕЙК and source link`;
+  - `vanishing text hides after N s and more-time sets moreTime` (using `page.clock`);
+  - `desktop paper theme renders two columns` (check `getComputedStyle(grid).gridTemplateColumns` has 2 tracks).
+- [ ] **Step 2:** Run `npx playwright test quiz` and expect FAIL.
+- [ ] **Step 3:** Implement.
+- [ ] **Step 4:** Run `npx playwright test quiz` and expect PASS.
+- [ ] **Step 5:** Commit: `feat: question screens and materials`.
+
+### Task 11: Experience state machine
+
+**Files:**
+- Create: `src/app/Experience.svelte`, `src/app/FriendBanner.svelte`, `tests/e2e/flow.spec.ts`
+- Modify: `src/main.ts` (mount `Experience` with `loadContent()`)
+
+**Interfaces:**
+- Consumes: everything from Tasks 2–10.
+- Produces: the stages `feed1 → stop1 → feed2 → stop2 → crack → reality → reveal → verdict`.
+
+**Behaviour:**
+- On load:
+  - `seed = crypto.getRandomValues` (32-bit);
+  - `buildSession(content, seed, history.seenQuestionIds())`;
+  - `track('start')`.
+
+  If `parseFriendQuery(location.search)` is valid, `FriendBanner` shows «У друга {percent}% ({name}). А в тебе?» for 3 s as a toast over the feed, and `track('from-friend')`. If `?src=teacher` is present, `track('from-teacher')`.
+- `stop1`/`stop2`:
+  1. A quick crack flash: Crack with the `stop` variant, 8 shards, 400 ms.
+  2. Then that round's questions in the `feed-stop` theme.
+  3. Then back to the feed for round 2.
+- After `stop2`: the full `Crack`, then `reality`, which runs the 5 questions in the `paper` theme.
+- The sheep meter is visible in every stage except `crack`, `reveal` and `verdict`.
+- On entering `reveal`:
+  - `scoreRun`;
+  - `history.markSeen(all question ids)`;
+  - `history.saveResult`;
+  - `track('verdict')`, `track('level-'+id)`;
+  - if this was a retest, `track('retest-delta', …)`.
+- History: push a `history.pushState` entry per stage. On `popstate` during the test, re-push and stay; never exit mid-test.
+- No session state is persisted: a reload starts a new session from `feed1`.
+
+- [ ] **Step 1:** Write `flow.spec.ts` (mobile and desktop). Use `page.clock`, and seed via `?seed=123`, honoured only when `import.meta.env.MODE === 'test'`.
+  - `first paint is the feed`: within 1.5 s a `video` or poster is visible, and there is no text «You're a sheep» or «почати».
+  - `full run reaches verdict with a level`: always pick option a. A verdict with one of the 5 level names is visible, and `localStorage['yas:v1']` contains `lastResult`.
+  - `reload restarts cleanly`: after reaching `reality`, reload. The feed shows and the sheep meter equals 0.
+  - `back button does not leave mid-test`: on `stop1`, `page.goBack()` keeps the URL origin and the stage element visible.
+  - `friend banner shows from valid link and not from garbage`: `?from=boxer&p=73` shows «73%» and «Боксер». `?from=xyz&p=abc` shows no banner.
+- [ ] **Step 2:** Run `npx playwright test flow` and expect FAIL.
+- [ ] **Step 3:** Implement.
+- [ ] **Step 4:** Run `npx playwright test flow` and expect PASS.
+- [ ] **Step 5:** Commit: `feat: experience flow`.
+
+### Task 12: Reveal and verdict
+
+**Files:**
+- Create: `src/verdict/Reveal.svelte`, `Verdict.svelte`, `ExitPlan.svelte`, `Challenge.svelte`, `Facts.svelte`, `ShareActions.svelte`, `tests/e2e/verdict.spec.ts`
+- Modify: `src/app/Experience.svelte` (render these)
+
+**Interfaces:**
+- Consumes: `RunResult`, `Level`, `Fact[]`, `History`, `Character` (Task 14; until then a placeholder `<div>` with the level emoji).
+- Produces: `<Verdict result level facts history onretry />`.
+
+**Content order (§3 «Фінал»):**
+1. `Reveal`, a full-screen paper page. Typed in with SplitText, lines staggered: «Ферма існує.» / «Свині — це алгоритми і ті, хто ними користується.» / «Ти щойно побачив, як вони працюють.» Tap or 4 s to continue. The project title «You're a sheep» appears here for the first time, as the last line.
+2. Level spread:
+   - Character on the left (desktop) or top (mobile);
+   - «Рівень N з 5», the name, the percent, the description;
+   - the verdict lines as a list;
+   - «Це не IQ-тест. Це дзеркало.»
+3. If there was a previous result (`history.firstResult()` exists and differs from this run): «Було {p1}% ({name1}) → стало {p2}% ({name2})».
+4. `ExitPlan` with headings «Читати», «Дивитися», «Писати», «Робити», «Розвиватися».
+5. `Challenge`:
+   - if none is active: the button «Прийняти виклик: 7 днів»;
+   - if active: 7 day toggles plus «Через 7 днів пройди тест знову»;
+   - when `retestDue`: the banner «Минуло 7 днів — перевір, чи ти змінився» with a retest button that calls `onretry` and `track('retest')`.
+6. `Facts`: 3 facts chosen at random, each with its source link.
+7. `ShareActions`:
+   - «Кинути виклик» (story card, Task 13);
+   - «Кинь другу» (copies `friendUrl` and uses `navigator.share` when available, then `track('share-link')`);
+   - «Пройти ще раз»;
+   - links «Для вчителя» `${base}teacher/`, «Хто ми» `${base}about/`, «Приватність» `${base}privacy/`.
+
+- [ ] **Step 1:** Write `verdict.spec.ts`. Mount via a `verdict-harness.html` test entry with fixture results.
+  - `shows level, verdict lines, disclaimer`;
+  - `retest delta shown when previous result exists`;
+  - `challenge toggles persist across reload`;
+  - `retest banner appears when last result is 7 days old`: seed `localStorage` with a result dated 8 days ago;
+  - `share link copied`: stub `navigator.clipboard`; the copied value matches `/c/boxer/?p=`;
+  - `facts each have a link`.
+- [ ] **Step 2:** Run `npx playwright test verdict` and expect FAIL.
+- [ ] **Step 3:** Implement.
+- [ ] **Step 4:** Run `npx playwright test verdict` and expect PASS.
+- [ ] **Step 5:** Commit: `feat: reveal and verdict`.
+
+### Task 13: Story challenge card
+
+**Files:**
+- Create: `src/lib/storycard.ts`, `tests/unit/storycard.test.ts`, `tests/e2e/storycard.spec.ts`
+- Modify: `src/verdict/ShareActions.svelte`
+
+**Interfaces:**
+- Produces:
+  - `drawStoryCard(ctx: CanvasRenderingContext2D, d: { level: Level; percent: number; siteLabel: string; characterImg: CanvasImageSource }): void`. Draws at 1080×1920.
+  - `cardText(level: Level, percent: number): { kicker: string; headline: string; dare: string; slogan: string }`. Pure function.
+  - `shareOrDownload(blob: Blob, filename: string): Promise<'shared' | 'downloaded'>`
+
+**Copy (exact):**
+- `kicker` = `Я — ${level.name}. ${percent}%`
+- `headline` = `level.challengeLine`, defined in `levels.json`. It dares the friend, for example «А ти, мабуть, вівця.»
+- `dare` = «Доведи, що ні →»
+- `slogan` = `level.slogan`
+
+**Look (§8, poster):**
+- cream background, with red/cream conic rays from the top-left;
+- the character image in black;
+- the headline on a black band rotated −3° in Unbounded 900, uppercase;
+- the slogan on a red band;
+- `siteLabel` at the bottom;
+- fonts awaited via `document.fonts.load` before drawing.
+
+- [ ] **Step 1:** Write the tests.
+  - `cardText for boxer 73`: the kicker is «Я — Боксер. 73%», and the dare is «Доведи, що ні →».
+  - `shareOrDownload uses navigator.share with files when canShare`. Then: `falls back to <a download> when share missing or rejects with non-AbortError`. Then: `AbortError (user cancelled) resolves 'shared' without download`.
+  - In `storycard.spec.ts`, `canvas renders 1080×1920 non-blank` checks that the pixel at (540, 200) differs from the pixel at (540, 1900).
+- [ ] **Step 2:** Run `npx vitest run storycard && npx playwright test storycard` and expect FAIL.
+- [ ] **Step 3:** Implement, then wire «Кинути виклик»:
+  1. render to an offscreen canvas;
+  2. `toBlob('image/png')`;
+  3. call `shareOrDownload(blob, 'you-re-a-sheep-'+level.id+'.png')`;
+  4. `track('share-card')`.
+- [ ] **Step 4:** Run the same command and expect PASS.
+- [ ] **Step 5:** Commit: `feat: story challenge card`.
+
+### Task 14: Characters and engravings
+
+**Files:**
+- Create: `src/art/Character.svelte`, `src/art/engravings/{sheep,molly,boxer,benjamin,orwell}.(svg|png)`, `src/art/vignettes/*.png` (2–4 small engravings for the paper pages), `public/og/<levelId>.png` (1200×630), `content/credits.json` entries, `tests/unit/credits.test.ts`
+- Modify: `src/verdict/Verdict.svelte`, `src/lib/storycard.ts` caller, `src/quiz/QuestionScreen.svelte` (vignette)
+
+**Interfaces:**
+- Produces: `<Character id={LevelId} size breathe={true} />`, and `credits.json` entries of the form `{ file, title, author, source, url, license }`.
+
+**Requirements:**
+- Use only 19th-century or earlier engravings in the public domain, from Wikimedia Commons, the Biodiversity Heritage Library or Old Book Illustrations:
+  - sheep, horse (for Molly: a mare, ideally with ribbons or an elegant pose), heavy draught horse (Boxer), donkey (Benjamin);
+  - for Orwell: a quill, an inkwell or an open book, **not** a photo or portrait of Orwell.
+- Clean to ink-on-transparent, using an ffmpeg threshold or colorkey filter. Keep files under 120 KB each.
+- Record each file in `credits.json` with its license URL. Any file whose license is not PD or CC0 is rejected.
+- `breathe`: a GSAP `scaleY 1→1.015`, yoyo, 3.2 s, `sine.inOut`, `transform-origin: bottom`. It is disabled under reduced motion.
+- OG images: the poster style of Task 13 at 1200×630, rendered by a Playwright script `scripts/gen-og.ts` that runs `drawStoryCard`-like drawing and saves the PNGs. Add an npm script `gen:og`.
+
+- [ ] **Step 1:** Write `credits.test.ts`:
+  - every file under `src/art/` and `public/og/` and every non-placeholder clip in content has a `credits.json` entry;
+  - every license is in the allowlist `['PD', 'CC0', 'Pexels', 'own', 'OFL']`;
+  - every url starts with `https://`.
+- [ ] **Step 2:** Run `npx vitest run credits` and expect FAIL.
+- [ ] **Step 3:** Source, process and credit the assets. Build `Character`, run `npm run gen:og`, and replace the emoji placeholders.
+- [ ] **Step 4:** Run `npx vitest run credits && npx playwright test verdict storycard` and expect PASS.
+- [ ] **Step 5:** Commit: `feat: engraved characters, vignettes, OG images`.
+
+### Task 15: Real content (copy, levels, facts, pools)
+
+**Files:**
+- Create or fill: `content/uk/ui.json`, `content/uk/levels.json`, `content/uk/facts.json`, `content/uk/episodes/2026-10-base.json`, `public/clips/*` (placeholders via the Task 8 script)
+- Modify: `tests/unit/content.test.ts` (remove `.skip` from `real content passes minimums`)
+
+**Requirements:**
+- `levels.json`:
+  - 5 levels with the names, ranges and meanings exactly as in the §4 table;
+  - `slogan` per level, in the farm-slogan style («Чотири свайпи — добре! Думати — погано!» for sheep);
+  - `challengeLine` per level;
+  - `quote` as our own translation of a short line from the English original.
+- `exitPlan` per level:
+  - «Скотний двір» / «Колгосп тварин» first for everyone;
+  - the other books, channels and media-literacy resources come from the §5 candidates.
+
+  Before adding each item, **verify with a web search** that the book exists in Ukrainian and the resource URL is live. Drop anything unverified.
+- `facts.json`: exactly the §6 list, with URLs. Use the note «Головні причини — війна й ковід» on the PISA fact.
+- Questions, written in the §2 tone:
+  - ≥ 6 per round-3 type;
+  - 3 round-1 clip sets: 8 clips each, at least 3 traps (`fake`, `clickbait`, `ad`), ≥ 3 bound questions each, including one pure-recall question («Скільки котів…» style);
+  - 3 round-2 clip sets: 6 clips each, with subtler traps, one `real` trap that looks fake, ≥ 2 bound questions;
+  - `answer-in-front` uses the `schedule` material (the outage-schedule scenario);
+  - `close-reading` uses `text` with `vanishSeconds` ≤ 30;
+  - `herd` puts the fake percent on a wrong option.
+- `enemy` (≥ 6):
+  - only fakes already debunked by StopFake, VoxCheck, the Center for Countering Disinformation or a comparable fact-checker;
+  - each with a `source` linking to the debunk and `fakeLabel: true`;
+  - serious tone;
+  - render the fake's text paraphrased and shortened, so the card cannot be screenshotted as a standalone fake.
+
+  Verify every link.
+- Fake items are invented: no real people, media or brands.
+- Clips: generate placeholders for all clip ids with labels describing the intended footage (for example «кіт стрибає на огірок»), with license `placeholder`. Real clips are the owner's job (§11).
+- [ ] **Step 1:** Remove `.skip` from `real content passes minimums`. Run `npx vitest run content` and expect FAIL with the minimum-count errors.
+- [ ] **Step 2:** Write the content and verify the sources.
+- [ ] **Step 3:** Run `npx vitest run content` and expect PASS. Then run `npx playwright test flow`, which still passes with the real content.
+- [ ] **Step 4:** Commit: `content: v1 Ukrainian content, levels, facts, pools`.
+
+### Task 16: Teacher, about and privacy pages
+
+**Files:**
+- Create: `src/pages/Page.svelte`, `src/pages/teacher.ts`, `about.ts`, `privacy.ts`, `content/uk/pages/teacher.md`, `about.md`, `privacy.md`, `scripts/gen-teacher-pdf.ts`, `tests/e2e/pages.spec.ts`
+- Modify: the 3 HTML entries; `package.json` (`build` runs `vite build && tsx scripts/gen-teacher-pdf.ts`)
+
+**Requirements:**
+- `Page.svelte` renders markdown via `marked` in the paper style, with a header that links back to the test (`${base}`).
+- `teacher.md` (§9):
+  - a 45-minute lesson plan as a timed outline: 5 min intro without spoilers, 10 min test, 20 min discussion with questions, 10 min on how to recognise ІПСО;
+  - homework: the 7-day challenge and a retest;
+  - a «Посилання для класу» button that copies `${origin}${base}?src=teacher`;
+  - a download link to `lesson.pdf`.
+- `about.md`: who and why, where the numbers come from (link to the facts), «Це не IQ-тест. Це дзеркало.», and a contact. The contact email is a placeholder `TODO-owner@example.com` that the release check flags.
+- `privacy.md`: what is collected (anonymous GoatCounter counters, no cookies) and what is not (no names, contacts or answers sent; results stay in your browser), and how to clear it (the button «Видалити мої дані» clears `yas:v1`).
+- `gen-teacher-pdf.ts`: runs `vite preview`, has Playwright Chromium print `/teacher/?print=1` to `dist/teacher/lesson.pdf` (A4), then stops the server. Print CSS hides the buttons.
+- [ ] **Step 1:** Write `pages.spec.ts`:
+  - `teacher page has lesson outline and class link with src=teacher`;
+  - `lesson.pdf exists and is > 10KB` (check with `fs` after the build);
+  - `about has disclaimer`;
+  - `privacy delete button clears storage`.
+- [ ] **Step 2:** Run `npx playwright test pages` and expect FAIL.
+- [ ] **Step 3:** Implement.
+- [ ] **Step 4:** Run `npx playwright test pages` and expect PASS.
+- [ ] **Step 5:** Commit: `feat: teacher, about, privacy pages`.
+
+### Task 17: Performance budget and release check
+
+**Files:**
+- Create: `lighthouserc.json` (`ci.collect.staticDistDir: "dist"`, `url: ["/"]`, `settings.preset` omitted to keep the mobile default), `scripts/release-check.ts`, `tests/unit/release-check.test.ts`
+- Modify: `.github/workflows/deploy.yml` (add a Lighthouse CI step after the build, with mobile emulation), `package.json`
+
+**Requirements:**
+- Lighthouse on `/`, mobile, simulated slow 4G:
+  - performance ≥ 0.85, accessibility ≥ 0.9;
+  - LCP ≤ 2500 ms;
+  - total transfer before first interaction ≤ 600 KB (JS ≤ 120 KB gz, first clip ≤ 300 KB).
+
+  GSAP and `d3-delaunay` must load **lazily**: dynamic `import()` when the feed's first clip starts (for Observer) and before the first crack.
+- `release-check.ts` exits non-zero with a list when any of these hold:
+  - a clip has a `placeholder` license;
+  - an asset has no credit;
+  - the about page still contains `TODO-owner`;
+  - `validateContent(..., { release: true, minimums: true })` returns errors.
+
+  CI runs it as a **non-blocking warning** step; the owner runs `npm run release-check` before announcing.
+- [ ] **Step 1:** Write `release-check.test.ts`:
+  - it reports the placeholder clips and `TODO-owner` in the current repo state;
+  - it passes on a temp fixture without them.
+- [ ] **Step 2:** Run `npx vitest run release-check` and expect FAIL.
+- [ ] **Step 3:** Implement the release check, the lazy imports and the Lighthouse config.
+- [ ] **Step 4:** Run `npm test && npm run build && npx lhci autorun` and expect the tests to pass and the Lighthouse assertions to pass. Run `npm run release-check` and expect a non-zero exit listing the placeholders (correct at this stage).
+- [ ] **Step 5:** Commit: `chore: perf budget and release check`.
+
+---
+
+## After all tasks
+
+- Run the whole suite: `npm test && npm run check && npm run e2e`. Everything must be green.
+- Whole-branch code review (superpowers:requesting-code-review).
+- Hand the owner the list of what they still need to do (§11):
+  - real clips;
+  - domain + `CUSTOM_DOMAIN` variable;
+  - `VITE_GOATCOUNTER_CODE`;
+  - the contact email;
+  - `npm run release-check` until clean;
+  - push.
