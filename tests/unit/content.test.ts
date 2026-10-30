@@ -14,6 +14,12 @@ describe('validateContent', () => {
     expect(validateContent(fresh())).toEqual([]);
   });
 
+  it('rewrite question must not be a stop question', () => {
+    const c = fresh();
+    set(c, 's1').questionIds.push('rw1');
+    expect(validateContent(c)).toContain('clipset:s1 rewrite question rw1 listed in questionIds');
+  });
+
   it('correct must be an option', () => {
     const c = fresh();
     q(c, 'r1a').correct = 'd';

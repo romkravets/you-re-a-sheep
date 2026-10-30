@@ -40,7 +40,12 @@ export function buildSession(
 
   const feedRound = (round: 1 | 2): SessionRound => {
     const clipSet = pickSet(round);
-    const questions = shuffle(feedQuestionIds(clipSet), rnd)
+    const ids = shuffle(feedQuestionIds(clipSet), rnd);
+    const ordered = [...ids.filter((id) => !seenQuestionIds.has(id)), ...ids.filter((id) => seenQuestionIds.has(id))];
+    if (ordered.length < FEED_QUESTIONS[round]) {
+      throw new Error(`clip set ${clipSet.id} has ${ordered.length} stop questions, needs ${FEED_QUESTIONS[round]}`);
+    }
+    const questions = ordered
       .slice(0, FEED_QUESTIONS[round])
       .map((id) => withShuffledOptions(byId.get(id)!, rnd));
     return { kind: 'feed', clipSet, questions };

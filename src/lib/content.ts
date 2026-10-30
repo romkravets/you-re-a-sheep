@@ -94,6 +94,9 @@ function checkClipSets(clipSets: Episode['clipSets'], qById: Map<string, Questio
     }
     const clip = s.clips.find((x) => x.id === s.rewrite!.clipId);
     if (!clip) errs.push(`clipset:${s.id} rewrite clip ${s.rewrite.clipId} not in set`);
+    if (s.questionIds.includes(s.rewrite.questionId)) {
+      errs.push(`clipset:${s.id} rewrite question ${s.rewrite.questionId} listed in questionIds`);
+    }
     const rq = qById.get(s.rewrite.questionId);
     if (!rq) {
       errs.push(`clipset:${s.id} unknown question ${s.rewrite.questionId}`);

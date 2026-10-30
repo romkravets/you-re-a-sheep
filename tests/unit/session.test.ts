@@ -4,14 +4,7 @@ import { buildSession } from '../../src/lib/session';
 import { makeRng, shuffle } from '../../src/lib/rng';
 import type { Content, ClipSet, Question, RealityRound, SessionRound } from '../../src/lib/types';
 
-/** Fixture plus a third recall question in s1, so the feed has 3 questions besides the rewrite. */
-const base = (): Content => {
-  const c = structuredClone(fixtureJson) as unknown as Content;
-  const ep = c.episodes[0];
-  ep.questions.push({ ...structuredClone(ep.questions.find((q) => q.id === 'r1b')!), id: 'r1c' });
-  ep.clipSets[0].questionIds.push('r1c');
-  return c;
-};
+const base = (): Content => structuredClone(fixtureJson) as unknown as Content;
 
 /** Fixture extended to 3 sets per round and 6 questions per round-3 type. */
 function big(): Content {
@@ -26,20 +19,19 @@ function big(): Content {
     const rwN = clone(rw, `rw${n}`);
     extraQs.push(rwN);
     const mk = (s: ClipSet): ClipSet => {
-      const qids = s.questionIds.filter((id) => id !== s.rewrite?.questionId).map((id) => {
+      const qids = s.questionIds.map((id) => {
         extraQs.push(clone(ep.questions.find((q) => q.id === id)!, `${id}-${n}`));
         return `${id}-${n}`;
       });
       return {
         ...structuredClone(s),
         id: `${s.id}-${n}`,
-        questionIds: s.rewrite ? [rwN.id, ...qids] : qids,
+        questionIds: qids,
         rewrite: s.rewrite && { ...s.rewrite, questionId: rwN.id },
       };
     };
     extraSets.push(mk(s1), mk(s2));
   }
-  // fixture quirk: s1 lists its rewrite question in questionIds; keep it that way.
   ep.clipSets.push(...extraSets);
   ep.questions.push(...extraQs);
   const types = new Set(ep.questions.filter((q) => !['recall', 'rewritten'].includes(q.type)).map((q) => q.type));
@@ -142,6 +134,19 @@ describe('buildSession', () => {
       }
     }
     expect(orders.size).toBeGreaterThan(1);
+  });
+
+  it('prefers unseen stop questions within the set', () => {
+    const p = base();
+    const ep = p.episodes[0];
+    ep.clipSets = ep.clipSets.filter((s) => s.round === 1);
+    ep.questions.push({ ...structuredClone(ep.questions.find((q) => q.id === 'r1b')!), id: 'r1d' });
+    ep.clipSets[0].questionIds.push('r1d');
+    const seen = new Set(['r1a', 'r1b', 'r1c']);
+    for (let seed = 0; seed < 50; seed++) {
+      const ids = (buildSession(p, seed, seen, { pilot: true }).rounds[0] as SessionRound).questions.map((q) => q.id);
+      expect(ids).toContain('r1d');
+    }
   });
 
   it('pilot session shape', () => {
