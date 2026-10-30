@@ -40,10 +40,11 @@ It also ships teacher, about and privacy pages.
 - **Run budget.**
   - Round 1: 8 clips and 3 questions.
   - Round 2: 6 clips and 2 questions.
-  - Round 3: 5 questions. Two are mandatory, of types `farm` and `enemy`. Three are random from the other round-3 types.
-  - About 10 questions in total, 3–4 min (§3).
+  - Round 3: 5 questions. Three are mandatory: `farm`, `enemy`, and the `rewritten` question bound to the round-1 clip set. Two are random from the other round-3 types.
+  - About 10 questions in total, about 4 min (§3).
+  - Every question asks for confidence; every correct round-3 answer asks «А чому?» (§3 «Впевненість, «А чому?» і шаблон помилок»).
 - **Content pool minimums** (§3):
-  - 6 questions per round-3 type;
+  - 6 questions per round-3 type, except `rewritten` (one per round-1 clip set);
   - 3 clip sets per feed round.
 - **Vanishing text** lasts at most 30 s, with a «мені потрібно більше часу» button that does not penalise but is noted in the verdict (§3).
 - **Level thresholds** (% «думаю сам»): Вівця 0–29, Моллі 30–49, Боксер 50–69, Бенджамін 70–89, Орвелл 90–100 (§4).
@@ -68,6 +69,35 @@ It also ships teacher, about and privacy pages.
 
 ---
 
+## Pilot (Stage 0): build this first
+
+Spec §13 «Етап 0». The pilot is the **first slice of v1**, built from the tasks below, not a throwaway prototype. When it is done, stop and hand it to the owner for a class test. The rest of v1 continues from the same code.
+
+**Pilot run:** `feed1 → stop1 → reality (3 questions) → reveal → verdict`.
+- One round-1 clip set: 8 placeholder clips, with traps `fake`, `clickbait`, `ad`, `rage`, one `real`, and the `rewrite` post. 3 bound questions at `stop1`.
+- Reality: the set's `rewritten` question, one `herd` and one `farm`, in that order.
+- Verdict: `Reveal`, then level (emoji instead of engraving), percent, «Твій шаблон», verdict lines, «Це не IQ-тест. Це дзеркало.», «Пройти ще раз».
+
+**Tasks, in order:**
+
+| Task | Pilot scope |
+|---|---|
+| 1 Scaffold | Full. Only the `index.html` entry; the 3 page entries come with Task 16. |
+| 2 Content | Full validator and tests. The `minimums` and `real content` checks stay for v1. |
+| 3 Session | Full, plus `buildSession(content, seed, seen, { pilot: true })` returning `rounds: [round1, reality]`, where reality is the rewrite, one `herd` and one `farm`. Test: `pilot session shape`. `Session.rounds` becomes an array type (`Array<SessionRound \| RealityRound>`). |
+| 4 Scoring | Full. |
+| 8 Feed | Full. |
+| 10 Questions | Full, materials limited to `Telegram`, `Chat` and `Rewritten`. |
+| 11 Flow | Pilot stages only. No history, analytics or friend banner. Between `stop1` and `reality`, a 600 ms crossfade instead of `Crack`. |
+| 12 Verdict | `Reveal` and the level spread only (items 1–2 of the content order) plus «Пройти ще раз». |
+| 15 Content | Pilot content only: `ui.json`, `levels.json` (all 5, exit plans may be empty), `patterns.json`, and `episodes/pilot.json` with the set and questions above. |
+
+Skipped until after the class test: Tasks 5, 6, 7, 9, 13, 14, 16, 17, 18, and round 2.
+
+**Done when:** `npm test` and `npx playwright test flow quiz feed` pass; `npm run dev -- --host` opens the pilot on a phone in the same Wi-Fi; a passive user (never touches anything except answers) reaches the verdict in under 4 minutes.
+
+**Owner, before the class test:** replace the 8 placeholder clips with real ones (own or Pexels) using the same ids, and check the run on 2–3 phones.
+
 ## File Structure
 
 ```
@@ -91,6 +121,7 @@ scripts/make-placeholder-clips.sh  ffmpeg: generates labelled placeholder clips
 content/uk/ui.json                 interface strings
 content/uk/levels.json             5 levels: copy, slogan, challenge line, exit plan
 content/uk/facts.json              verified facts with sources
+content/uk/patterns.json           one «Твій шаблон» line per skill
 content/uk/pages/{teacher,about,privacy}.md
 content/uk/episodes/2026-10-base.json   clip sets + question pool
 content/credits.json               every clip/engraving/font: source, url, license
@@ -117,7 +148,7 @@ src/app/FriendBanner.svelte
 src/feed/Feed.svelte  FeedClip.svelte  feed-input.ts  preload.ts
 src/crack/Crack.svelte  shards.ts
 src/quiz/QuestionScreen.svelte  Explanation.svelte
-src/quiz/materials/{Telegram,Schedule,Article,Chat,VanishingText}.svelte
+src/quiz/materials/{Telegram,Schedule,Article,Chat,VanishingText,Rewritten}.svelte
 src/verdict/{Reveal,Verdict,ExitPlan,Challenge,Facts,ShareActions}.svelte
 src/art/Character.svelte           renders engraving + breathing
 src/art/engravings/<levelId>.svg|png
@@ -133,9 +164,11 @@ tests/fixtures/content.min.json    tiny valid content for unit tests
 // src/lib/types.ts
 export type LevelId = 'sheep' | 'molly' | 'boxer' | 'benjamin' | 'orwell';
 export type Round3Type = 'fake-or-true' | 'answer-in-front' | 'headline-vs-text'
-  | 'herd' | 'motive' | 'close-reading' | 'farm' | 'enemy';
+  | 'herd' | 'motive' | 'close-reading' | 'farm' | 'enemy' | 'newspeak' | 'rewritten';
 export type QuestionType = 'recall' | Round3Type;
-export type TrapKind = 'fake' | 'clickbait' | 'ad' | 'real';
+export type TrapKind = 'fake' | 'clickbait' | 'ad' | 'rage' | 'real';
+export type Skill = 'detail' | 'source' | 'herd' | 'motive';   // fixed order = tie-break order
+export type Confidence = 'guess' | 'maybe' | 'sure';           // «Навмання» | «Мабуть» | «Точно»
 
 export interface Source { label: string; url: string }
 export interface License { source: string; url: string; license: string } // license 'placeholder' allowed only pre-release
@@ -147,18 +180,22 @@ export interface Clip {
   trap?: TrapKind;
   license: License;
 }
-export interface ClipSet { id: string; round: 1 | 2; clips: Clip[]; questionIds: string[] }
+export interface ClipSet { id: string; round: 1 | 2; clips: Clip[]; questionIds: string[];
+  rewrite?: { clipId: string; questionId: string } }  // round 1 only: the clip whose post comes back changed in round 3
 
 export type Material =
   | { kind: 'telegram'; channel: string; text: string; views: string; time: string }
   | { kind: 'schedule'; queue: string; slots: { from: string; to: string; on: boolean }[]; chat: string[]; now: string }
   | { kind: 'article'; headline: string; body: string }
-  | { kind: 'text'; body: string; vanishSeconds: number };
+  | { kind: 'text'; body: string; vanishSeconds: number }
+  | { kind: 'rewritten'; channel: string; before: string; after: string };  // shows `after`; `before` revealed after the answer
 
 export interface Option { id: 'a' | 'b' | 'c' | 'd'; text: string }
 export interface Question {
   id: string; type: QuestionType; prompt: string; material?: Material;
   options: Option[]; correct: Option['id'];
+  skill: Skill;               // what a miss on this question says about you
+  why?: { options: Option[]; correct: Option['id'] };  // «А чому?»; required for round-3 types, absent for 'recall'
   explanation: string;        // shown after answer
   verdictLine: string;        // shown in verdict if wrong, e.g. «Ти пішов за натовпом.»
   herd?: { option: Option['id']; percent: number };  // fake crowd hint (type 'herd')
@@ -171,15 +208,17 @@ export interface ExitPlan { read: { title: string; author: string; url?: string 
 export interface Level { id: LevelId; name: string; emoji: string; min: number; max: number;
   description: string; slogan: string; challengeLine: string; exitPlan: ExitPlan; quote?: string }
 export interface Fact { id: string; text: string; source: Source; note?: string }
-export interface Content { ui: Record<string, string>; levels: Level[]; facts: Fact[]; episodes: Episode[] }
+export interface Pattern { skill: Skill; line: string }  // «Твій шаблон: {line}»
+export interface Content { ui: Record<string, string>; levels: Level[]; facts: Fact[]; patterns: Pattern[]; episodes: Episode[] }
 
 // runtime
 export type FeedEvent = { kind: 'like' | 'share'; clipId: string } | { kind: 'dwell'; clipId: string; ms: number };
-export interface Answer { questionId: string; chosen: Option['id']; moreTime?: boolean }
+export interface Answer { questionId: string; chosen: Option['id']; confidence: Confidence; whyChosen?: Option['id']; moreTime?: boolean }
 export interface SessionRound { kind: 'feed'; clipSet: ClipSet; questions: Question[] }
 export interface RealityRound { kind: 'reality'; questions: Question[] }
 export interface Session { seed: number; rounds: [SessionRound, SessionRound, RealityRound] }
-export interface RunResult { percent: number; level: LevelId; verdictLines: string[]; at: string /* ISO */ }
+export interface RunResult { percent: number; level: LevelId; verdictLines: string[];
+  pattern: Skill | null; confidentWrong: number; at: string /* ISO */ }
 ```
 
 ---
@@ -237,9 +276,9 @@ export interface RunResult { percent: number; level: LevelId; verdictLines: stri
 **Interfaces:**
 - Produces:
   - `validateContent(c: Content, opts?: { release?: boolean; minimums?: boolean }): string[]`. Returns a list of human-readable errors; empty means valid.
-  - `loadContent(): Content`. Imports `content/uk/*.json` and all `content/uk/episodes/*.json` via `import.meta.glob(..., { eager: true })`.
+  - `loadContent(): Content`. Imports `content/uk/*.json` (including `patterns.json`) and all `content/uk/episodes/*.json` via `import.meta.glob(..., { eager: true })`.
 
-- [ ] **Step 1:** Write the tests in `content.test.ts`. The fixture is a minimal valid `Content` with 1 clip set per round and 1 question per type.
+- [ ] **Step 1:** Write the tests in `content.test.ts`. The fixture is a minimal valid `Content` with 1 clip set per round, 1 question per type (each with `skill`, and `why` on round-3 types) and 4 patterns.
   - `fixture is valid`: `validateContent(fixture)` equals `[]`.
   - `correct must be an option`: change one question's `correct` to `'d'` when there are only 3 options. Errors contain `q:<id> correct "d" not in options`.
   - `enemy needs source and fakeLabel`: errors contain `q:<id> enemy requires source.url` and `q:<id> enemy requires fakeLabel`.
@@ -248,6 +287,9 @@ export interface RunResult { percent: number; level: LevelId; verdictLines: stri
   - `levels cover 0–100 contiguously`: change molly's `min` to 31 and expect `levels gap at 30`.
   - `vanishSeconds ≤ 30`.
   - `herd hint must point to a wrong option`.
+  - `round-3 questions need why`: removing `why` from a non-`recall` question gives `q:<id> missing why`. A `why.correct` not among `why.options` gives `q:<id> why correct "<x>" not in options`. A `recall` question with `why` gives `q:<id> recall must not have why`.
+  - `rewrite binding`: every round-1 clip set has `rewrite`; its `clipId` is in the set, its question has type `rewritten` and a `rewritten` material whose `before` equals that clip's `overlay`, and `before !== after`. Errors: `clipset:<id> missing rewrite`, `clipset:<id> rewrite clip <cid> not in set`, `q:<id> rewrite before does not match clip overlay`. A `rewritten` question not referenced by any clip set gives `q:<id> rewritten question unbound`. Round-2 sets must not have `rewrite`.
+  - `patterns cover every skill once`: dropping the `motive` pattern gives `patterns missing motive`; a duplicate gives `patterns duplicate detail`.
   - `minimums` with `{ minimums: true }`: the fixture gives errors `type herd has 1 questions, need 6` and `round 1 has 1 clip sets, need 3`.
   - `release` with `{ release: true }`: a clip whose `license.license === 'placeholder'` gives `clip:<id> placeholder license`.
   - `real content passes minimums`: `validateContent(loadContent(), { minimums: true })` equals `[]`. Mark it `it.skip` until Task 15, which removes the skip.
@@ -272,7 +314,7 @@ export interface RunResult { percent: number; level: LevelId; verdictLines: stri
   - `deterministic`: the same seed gives a deep-equal session.
   - `round shapes`: round 0 has 8 clips and 3 questions. Round 1 has 6 clips and 2 questions. Round 2 has exactly 5 questions.
   - `feed questions belong to their set`: every round-0/1 question id is in `clipSet.questionIds`.
-  - `round 3 always has farm and enemy`: over 200 seeds, each reality round has exactly one `farm`, exactly one `enemy`, and 3 others with 3 distinct types, none of them `farm`, `enemy` or `recall`.
+  - `round 3 always has farm, enemy and the rewrite`: over 200 seeds, each reality round has exactly one `farm`, exactly one `enemy`, the `rewritten` question of the chosen round-1 set (`rewrite.questionId`), and 2 others with 2 distinct types, none of them `farm`, `enemy`, `rewritten` or `recall`.
   - `bound questions never appear in round 3`: over 200 seeds, no reality-round question id is in any `clipSet.questionIds`.
   - `prefers unseen`: if `seenQuestionIds` contains all but one `farm` question, that unseen one is chosen. If all are seen, the builder falls back to any.
   - `options shuffled but correct preserved`: the option order differs across seeds, and `correct` still points to the same text.
@@ -280,7 +322,7 @@ export interface RunResult { percent: number; level: LevelId; verdictLines: stri
 - [ ] **Step 3:** Implement:
   1. Pick a clip set per round with `rnd`, preferring sets whose questions are unseen.
   2. Take that set's first N questions in shuffled order (N is 3 for round 1 and 2 for round 2).
-  3. Round 3: pick one `farm` and one `enemy`, then 3 other distinct round-3 types, one question each. Draw only from questions **not bound to any clip set** (bound questions belong to the feed). Prefer unseen.
+  3. Round 3: pick one `farm` and one `enemy`, add the round-1 set's `rewrite.questionId`, then 2 other distinct round-3 types (not `rewritten`), one question each. Except for the rewrite, draw only from questions **not bound to any clip set** (bound questions belong to the feed). Prefer unseen. Shuffle the 5, but never put the rewrite first, so the feed has faded a little.
   4. Shuffle the option order per question.
 - [ ] **Step 4:** Run `npx vitest run session` and expect PASS.
 - [ ] **Step 5:** Commit: `feat: seeded session builder`.
@@ -298,20 +340,31 @@ export interface RunResult { percent: number; level: LevelId; verdictLines: stri
 
 **Scoring rules (decided here):**
 - Each question is worth 10 points.
+  - A wrong answer scores 0.
+  - A correct answer without `why` scores 10.
+  - A correct answer with `why` scores 10 if `whyChosen === why.correct`, else 5 (a **lucky guess**).
+  - `confidence` never changes points.
 - Penalties:
-  - −5 for a `share` on a clip whose `trap` is `fake`, `clickbait` or `ad`;
+  - −5 for a `share` on a clip whose `trap` is `fake`, `clickbait`, `ad` or `rage`;
   - −3 for a `like` on such a clip;
   - each penalty counts once per clip.
 - Formula: `percent = clamp(round((points - penalties) / (10 × questionCount) × 100), 0, 100)`.
+- `confidentWrong` = the number of wrong answers with `confidence === 'sure'`.
+- `pattern` (misses per skill):
+  - +1 to `question.skill` for each wrong answer and each lucky guess;
+  - +1 per penalised clip (once per clip, like the penalty), by trap kind: `fake` → `source`, `clickbait` → `detail`, `ad` and `rage` → `motive`;
+  - `pattern` is the skill with the most misses if that count is ≥ 2, else `null`. Ties go to the earlier skill in `Skill` order (`detail`, `source`, `herd`, `motive`).
 - `verdictLines`, in this order:
-  1. the `verdictLine` of each wrong answer;
-  2. «Ти переслав фейк.» for a share on a `fake` trap;
-  3. «Ти лайкнув клікбейт.» for a like on `clickbait`;
-  4. «Ти завис на клікбейті.» when dwell is ≥ 3000 ms on a `clickbait` or `ad` clip;
-  5. «Тобі знадобилось більше часу на читання.» if any answer has `moreTime`.
+  1. «Ти був певен — і помилився {n} {раз|рази|разів}.» when `confidentWrong ≥ 1` (Ukrainian plural: 1, 21… → раз; 2–4, 22–24… → рази; else разів; 11–14 → разів);
+  2. the `verdictLine` of each wrong answer;
+  3. «Ти вгадав, але не знав чому.» if there is any lucky guess;
+  4. «Ти переслав фейк.» for a share on a `fake` trap; «Тебе розлютили — і ти поширив.» for a share on a `rage` trap;
+  5. «Ти лайкнув клікбейт.» for a like on `clickbait`;
+  6. «Ти завис на клікбейті.» when dwell is ≥ 3000 ms on a `clickbait` or `ad` clip;
+  7. «Тобі знадобилось більше часу на читання.» if any answer has `moreTime`.
 
-  Deduplicate, max 4 lines.
-- `sheepMeter = round(100 × (lostPoints + penalties) / (10 × answeredSoFar || 1))`, clamped to 0–100.
+  Deduplicate, max 4 lines. The pattern is not a verdict line; the verdict shows it separately (Task 12).
+- `sheepMeter = round(100 × (lostPoints + penalties) / (10 × answeredSoFar || 1))`, clamped to 0–100. A lucky guess counts as 5 lost points.
 
 - [ ] **Step 1:** Write the tests:
   - `all correct, no events → 100, orwell`;
@@ -322,7 +375,13 @@ export interface RunResult { percent: number; level: LevelId; verdictLines: stri
   - `moreTime adds line but no penalty`;
   - `verdict lines capped at 4 and ordered as specified`;
   - `levelFor boundaries`: 29→sheep, 30→molly, 49→molly, 50→boxer, 69→boxer, 70→benjamin, 89→benjamin, 90→orwell, 100→orwell, and −3 clamps to sheep;
-  - `sheepMeter starts at 0 and is 100 after one wrong answer`.
+  - `sheepMeter starts at 0 and is 100 after one wrong answer`;
+  - `lucky guess scores 5`: 9 fully correct and one correct answer with a wrong `whyChosen` gives 95 and «Ти вгадав, але не знав чому.»;
+  - `confidence does not change points`: the same answers with all `guess` and all `sure` give the same `percent`;
+  - `confident wrong counted and first`: 3 wrong answers with `sure` give `confidentWrong === 3` and line 1 «Ти був певен — і помилився 3 рази.»; plural forms for 1, 5, 11, 21 are «раз», «разів», «разів», «раз»;
+  - `pattern needs 2 misses`: one `herd` miss gives `pattern === null`; two give `'herd'`;
+  - `feed penalties count toward pattern`: one wrong `source` question plus one share on a `fake` clip gives `'source'`;
+  - `pattern tie goes to earlier skill`: 2 `motive` misses and 2 `detail` misses give `'detail'`.
 - [ ] **Step 2:** Run `npx vitest run score` and expect FAIL.
 - [ ] **Step 3:** Implement as specified.
 - [ ] **Step 4:** Run `npx vitest run score` and expect PASS.
@@ -408,7 +467,8 @@ The storage key is `yas:v1`, holding a single JSON blob.
 
 ```ts
 type AnalyticsEvent = 'start' | 'round1-stop' | 'reality' | 'verdict' | `level-${LevelId}`
-  | 'share-card' | 'share-link' | 'retest' | 'retest-delta' | 'challenge-start' | 'from-teacher' | 'from-friend';
+  | 'share-card' | 'share-link' | 'retest' | 'retest-delta' | 'challenge-start' | 'from-teacher' | 'from-friend'
+  | `pattern-${Skill | 'none'}`;
 ```
 
   It calls `window.goatcounter?.count({ path: 'event/' + name, title: JSON-free string, event: true })`. If the script is missing it is a no-op that never throws. `retest-delta` sends the path `event/retest-delta/<bucket>`, with buckets `-∞..-1`, `0`, `1-9`, `10-19`, `20+`.
@@ -505,15 +565,22 @@ type AnalyticsEvent = 'start' | 'round1-stop' | 'reality' | 'verdict' | `level-$
 **Interfaces:**
 - Consumes: `Question`, `Material`, `Answer`.
 - Produces:
-  - `<QuestionScreen question theme={'feed-stop' | 'paper'} index total onanswer={(a: Answer) => void} />`. It shows the material and options. After the user picks, it shows `<Explanation>` and a «Далі →» button; `onanswer` fires on «Далі». There is no going back.
+  - `<QuestionScreen question theme={'feed-stop' | 'paper'} index total onanswer={(a: Answer) => void} />`. Steps, with no going back:
+    1. material and options; the user picks;
+    2. «Наскільки ти впевнений?» with three buttons «Навмання» / «Мабуть» / «Точно»;
+    3. only if the answer is correct and the question has `why`: «Так. А чому?» with the `why` options;
+    4. `<Explanation>` and a «Далі →» button; `onanswer` fires on «Далі».
   - `<SheepMeter value={0..100} theme />`.
 
 **UI requirements:**
 - `feed-stop` theme: black screen, white text, a red «🛑 Стоп.» kicker. It is used for the round 1/2 questions.
 - `paper` theme: book typography. On ≥ 900 px it is a two-page spread, with the material and an engraving vignette on the left and the prompt and options on the right. On mobile they stack.
-- Keys: 1–4 choose, Enter confirms «Далі».
+- Keys: 1–4 choose an option, 1–3 choose confidence and the «чому» option, Enter confirms «Далі».
+- Confidence and «чому» steps must not reveal correctness before the user commits: the chosen option stays highlighted neutrally until confidence is picked.
+- Explanation after a lucky guess: «✅ Так, але причина інша», then the correct `why` option and `explanation`.
 - `herd`: show `👥 {percent}%` beside the fake option. After the answer, the explanation must reveal «Цієї цифри не було — це пастка.» (append it automatically).
 - `enemy`: after the answer, a red «ФЕЙК» stamp over the material and a «Спростування: {source.label}» link (`target=_blank rel=noopener`).
+- `rewritten`: the material looks like the feed post (same handle, same caption style) but on paper. After the answer, show «Було» (`before`) and «Стало» (`after`) side by side with the changed words highlighted (word-level diff).
 - `VanishingText`: the text fades out after `vanishSeconds`. Visible countdown. The «мені потрібно більше часу» button pauses the countdown and adds +30 s once; it sets `moreTime: true` in the answer. The question appears after the text vanishes or when the user taps «Я прочитав».
 - Explanation, wrong: «❌ Неправильно», shows the chosen and the correct option, then `explanation`.
 - Explanation, right: «✅ Так» plus `explanation`.
@@ -521,8 +588,12 @@ type AnalyticsEvent = 'start' | 'round1-stop' | 'reality' | 'verdict' | `level-$
 
 - [ ] **Step 1:** Write `quiz.spec.ts`:
   - `wrong answer shows correct option and explanation`;
-  - `keyboard 2 then Enter answers b`;
+  - `keyboard 2, confidence 3, then Enter answers b with confidence sure`;
+  - `confidence is asked before the explanation`: after picking an option, no «✅» or «❌» is visible until a confidence button is pressed;
+  - `why only after a correct answer with why`: a correct round-3 answer shows «А чому?»; a wrong one and a `recall` question skip it;
+  - `wrong why shows lucky-guess explanation` and `onanswer` receives `whyChosen`;
   - `herd reveal line appended`;
+  - `rewritten shows before and after with the diff highlighted`;
   - `enemy shows ФЕЙК and source link`;
   - `vanishing text hides after N s and more-time sets moreTime` (using `page.clock`);
   - `desktop paper theme renders two columns` (check `getComputedStyle(grid).gridTemplateColumns` has 2 tracks).
@@ -558,14 +629,14 @@ type AnalyticsEvent = 'start' | 'round1-stop' | 'reality' | 'verdict' | `level-$
   - `scoreRun`;
   - `history.markSeen(all question ids)`;
   - `history.saveResult`;
-  - `track('verdict')`, `track('level-'+id)`;
+  - `track('verdict')`, `track('level-'+id)`, `track('pattern-'+(pattern ?? 'none'))`;
   - if this was a retest, `track('retest-delta', …)`.
 - History: push a `history.pushState` entry per stage. On `popstate` during the test, re-push and stay; never exit mid-test.
 - No session state is persisted: a reload starts a new session from `feed1`.
 
 - [ ] **Step 1:** Write `flow.spec.ts` (mobile and desktop). Use `page.clock`, and seed via `?seed=123`, honoured only when `import.meta.env.MODE === 'test'`.
   - `first paint is the feed`: within 1.5 s a `video` or poster is visible, and there is no text «You're a sheep» or «почати».
-  - `full run reaches verdict with a level`: always pick option a. A verdict with one of the 5 level names is visible, and `localStorage['yas:v1']` contains `lastResult`.
+  - `full run reaches verdict with a level`: always pick option a, confidence «Мабуть» and «чому» option a. A verdict with one of the 5 level names is visible, and `localStorage['yas:v1']` contains `lastResult`.
   - `reload restarts cleanly`: after reaching `reality`, reload. The feed shows and the sheep meter equals 0.
   - `back button does not leave mid-test`: on `stop1`, `page.goBack()` keeps the URL origin and the stage element visible.
   - `friend banner shows from valid link and not from garbage`: `?from=boxer&p=73` shows «73%» and «Боксер». `?from=xyz&p=abc` shows no banner.
@@ -582,19 +653,20 @@ type AnalyticsEvent = 'start' | 'round1-stop' | 'reality' | 'verdict' | `level-$
 
 **Interfaces:**
 - Consumes: `RunResult`, `Level`, `Fact[]`, `History`, `Character` (Task 14; until then a placeholder `<div>` with the level emoji).
-- Produces: `<Verdict result level facts history onretry />`.
+- Produces: `<Verdict result level facts patterns history onretry />`.
 
 **Content order (§3 «Фінал»):**
 1. `Reveal`, a full-screen paper page. Typed in with SplitText, lines staggered: «Ферма існує.» / «Свині — це алгоритми і ті, хто ними користується.» / «Ти щойно побачив, як вони працюють.» Tap or 4 s to continue. The project title «You're a sheep» appears here for the first time, as the last line.
 2. Level spread:
    - Character on the left (desktop) or top (mobile);
    - «Рівень N з 5», the name, the percent, the description;
+   - if `result.pattern` is set: «Твій шаблон:» and that skill's `Pattern.line`, set apart from the list (bold, larger);
    - the verdict lines as a list;
    - «Це не IQ-тест. Це дзеркало.»
-3. If there was a previous result (`history.firstResult()` exists and differs from this run): «Було {p1}% ({name1}) → стало {p2}% ({name2})».
+3. If there was a previous result (`history.firstResult()` exists and differs from this run): «Було {p1}% ({name1}) → стало {p2}% ({name2})», and «Впевнених помилок: було {c1} → стало {c2}» when either count is > 0.
 4. `ExitPlan` with headings «Читати», «Дивитися», «Писати», «Робити», «Розвиватися».
 5. `Challenge`:
-   - if none is active: the button «Прийняти виклик: 7 днів»;
+   - if none is active: the button «Прийняти виклик: 7 днів. Стань книгою», with one line: «Обери книжку з плану, читай по 20 хвилин замість стрічки, на 7-й день перекажи її другові»;
    - if active: 7 day toggles plus «Через 7 днів пройди тест знову»;
    - when `retestDue`: the banner «Минуло 7 днів — перевір, чи ти змінився» with a retest button that calls `onretry` and `track('retest')`.
 6. `Facts`: 3 facts chosen at random, each with its source link.
@@ -606,7 +678,8 @@ type AnalyticsEvent = 'start' | 'round1-stop' | 'reality' | 'verdict' | `level-$
 
 - [ ] **Step 1:** Write `verdict.spec.ts`. Mount via a `verdict-harness.html` test entry with fixture results.
   - `shows level, verdict lines, disclaimer`;
-  - `retest delta shown when previous result exists`;
+  - `shows pattern when set and hides it when null`;
+  - `retest delta shown when previous result exists`, including the confident-mistakes line;
   - `challenge toggles persist across reload`;
   - `retest banner appears when last result is 7 days old`: seed `localStorage` with a result dated 8 days ago;
   - `share link copied`: stub `navigator.clipboard`; the copied value matches `/c/boxer/?p=`;
@@ -700,6 +773,16 @@ type AnalyticsEvent = 'start' | 'round1-stop' | 'reality' | 'verdict' | `level-$
 
   Before adding each item, **verify with a web search** that the book exists in Ukrainian and the resource URL is live. Drop anything unverified.
 - `facts.json`: exactly the §6 list, with URLs. Use the note «Головні причини — війна й ковід» on the PISA fact.
+- `patterns.json`: one `line` per skill, in the §2 tone, naming a habit, not insulting the person. Starting drafts:
+  - `detail`: «ти бачиш картинку, а не деталі. Дрібний шрифт і цифри проходять повз тебе — а правду ховають саме там.»;
+  - `source`: «ти віриш повідомленню, не питаючи, хто його написав.»;
+  - `herd`: «коли не впевнений, ти йдеш за більшістю.»;
+  - `motive`: «ти не питаєш, хто на цьому заробляє.»
+- `newspeak` (≥ 6): what a nice word really means. Mix ads and corporations («оптимізація штату», shrinkflation) with documented propaganda euphemisms; the propaganda ones need a `source`, like `enemy`.
+- `rewritten`: one per round-1 clip set, bound via `rewrite`. The changed post is an ordinary one (no trap), with a concrete number, date or promise; the change is small but meaningful (a number, «лише», a date). One option is always «Нічого не змінилось».
+- Each round-1 clip set has one `rage` trap: an invented clip built to make you angry, with «поширте, хай усі знають!». No real people, groups or events.
+- Every question has a `skill`. Default by type: `close-reading`, `headline-vs-text`, `answer-in-front`, `rewritten`, `newspeak` → `detail`; `fake-or-true`, `enemy` → `source`; `herd` → `herd`; `motive`, `farm` → `motive`; `recall` → whatever the question actually tests (counting cats → `detail`, «що не так з новиною» → `source`).
+- Every round-3 question has `why` with 2–3 options: one real reason and plausible wrong reasons (for example for a fake: «бо немає джерела» vs «бо там багато знаків оклику»). The wrong reasons must be ones a person might actually think, not jokes.
 - Questions, written in the §2 tone:
   - ≥ 6 per round-3 type;
   - 3 round-1 clip sets: 8 clips each, at least 3 traps (`fake`, `clickbait`, `ad`), ≥ 3 bound questions each, including one pure-recall question («Скільки котів…» style);
@@ -734,7 +817,8 @@ type AnalyticsEvent = 'start' | 'round1-stop' | 'reality' | 'verdict' | `level-$
   - homework: the 7-day challenge and a retest;
   - a «Посилання для класу» button that copies `${origin}${base}?src=teacher`;
   - a download link to `lesson.pdf`.
-- `about.md`: who and why, where the numbers come from (link to the facts), «Це не IQ-тест. Це дзеркало.», and a contact. The contact email is a placeholder `TODO-owner@example.com` that the release check flags.
+- `teacher.md` discussion questions include the Bradbury point (§9), in our own words, no quotes.
+- `about.md`: who and why, the Bradbury point (§9) in our own words, where the numbers come from (link to the facts), «Це не IQ-тест. Це дзеркало.», and a contact. The contact email is a placeholder `TODO-owner@example.com` that the release check flags.
 - `privacy.md`: what is collected (anonymous GoatCounter counters, no cookies) and what is not (no names, contacts or answers sent; results stay in your browser), and how to clear it (the button «Видалити мої дані» clears `yas:v1`).
 - `gen-teacher-pdf.ts`: runs `vite preview`, has Playwright Chromium print `/teacher/?print=1` to `public/teacher/lesson.pdf` (A4), then stops the server. Print CSS hides the buttons.
 - [ ] **Step 1:** Write `pages.spec.ts`:
