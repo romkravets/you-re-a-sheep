@@ -1,0 +1,33 @@
+{
+  "name": "you-re-a-sheep",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "test": "vitest run",
+    "e2e": "playwright test",
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "release-check": "tsx scripts/release-check.ts"
+  },
+  "devDependencies": {
+    "@lhci/cli": "^0.15.1",
+    "@playwright/test": "1.64",
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
+    "@types/node": "^26.6.6",
+    "svelte-check": "^4.7.7",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
+  },
+  "dependencies": {
+    "@fontsource/literata": "^5.3.0",
+    "@fontsource/unbounded": "^5.3.0",
+    "d3-delaunay": "^6.0.4",
+    "gsap": "3.15",
+    "marked": "^18.1.2",
+    "svelte": "^5.57.3"
+  }
+}

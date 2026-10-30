@@ -1,0 +1,31 @@
+@import '@fontsource/literata/cyrillic-400.css';
+@import '@fontsource/literata/cyrillic-700.css';
+@import '@fontsource/literata/cyrillic-400-italic.css';
+@import '@fontsource/unbounded/cyrillic-400.css';
+@import '@fontsource/unbounded/cyrillic-900.css';
+
+:root {
+  /* neon feed */
+  --neon-pink: #ff2d8a;
+  --neon-violet: #6b2bff;
+  --neon-cyan: #00e5ff;
+  --feed-bg: #000;
+  --feed-ui: #fff;
+
+  /* paper */
+  --paper: #f2ede3;
+  --paper-deep: #e9e1d1;
+  --ink: #161616;
+  --ink-soft: #4a443b;
+  --rule: rgba(22, 22, 22, 0.18);
+
+  /* poster */
+  --poster-red: #c8241c;
+  --poster-cream: #efe4cf;
+  --poster-black: #1a1a1a;
+
+  /* type */
+  --font-book: 'Literata', Georgia, serif;
+  --font-poster: 'Unbounded', system-ui;
+  --font-feed: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
