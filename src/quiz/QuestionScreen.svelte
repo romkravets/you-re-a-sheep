@@ -28,10 +28,10 @@
   let sent = false;
 
   // Reset all per-question state when the parent reuses this instance for another question.
-  let lastId = question.id;
+  let lastId: string | undefined;
   $effect.pre(() => {
     const id = question.id;
-    if (id === lastId) return;
+    if (lastId === undefined || id === lastId) { lastId = id; return; }
     lastId = id;
     step = 'pick';
     chosen = undefined;
