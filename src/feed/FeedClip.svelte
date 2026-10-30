@@ -9,9 +9,10 @@
     onlike: () => void;
     onshare: () => void;
     onunmute: () => void;
+    ontogglesound: () => void;
     onglow: (color: string) => void;
   }
-  let { clip, active, muted, showHint = false, onlike, onshare, onunmute, onglow }: Props = $props();
+  let { clip, active, muted, showHint = false, onlike, onshare, onunmute, ontogglesound, onglow }: Props = $props();
 
   let video: HTMLVideoElement | undefined = $state();
   let playing = $state(false);
@@ -33,8 +34,9 @@
     if (!video) return;
     if (active && !failed) {
       video.currentTime = 0;
-      video.play().catch(() => {
-        failed = true;
+      video.play().catch((err: unknown) => {
+        // pause() from a fast swipe rejects play() with AbortError: not a real failure.
+        if ((err as { name?: string })?.name !== 'AbortError') failed = true;
       });
     } else {
       video.pause();
@@ -68,6 +70,7 @@
     downY = e.clientY;
   };
   const onUp = (e: PointerEvent) => {
+    if ((e.target as Element).closest('button')) return;
     if (muted && Math.hypot(e.clientX - downX, e.clientY - downY) < 10) onunmute();
   };
 </script>
@@ -125,7 +128,7 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 3 3 10.500l6.500 2.500L12 20z"/></svg>
         <span>{clip.shares}</span>
       </button>
-      <button type="button" class="act sound" data-testid="sound" aria-label={muted ? 'Увімкнути звук' : 'Вимкнути звук'} onclick={() => onunmute()}>
+      <button type="button" class="act sound" data-testid="sound" aria-label={muted ? 'Увімкнути звук' : 'Вимкнути звук'} onclick={() => ontogglesound()}>
         {#if muted}
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6h4l5 4V5L7 9H3zm13.500 3 2.500-2.500-1.400-1.400L15 10.600l-2.500-2.500-1.400 1.400L13.600 12l-2.500 2.500 1.400 1.400L15 13.400l2.500 2.500 1.400-1.400z"/></svg>
         {:else}

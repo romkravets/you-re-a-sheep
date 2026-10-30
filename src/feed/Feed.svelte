@@ -101,7 +101,8 @@
           showHint={i === 0 && index === 0}
           onlike={() => onevent({ kind: 'like', clipId: clip.id })}
           onshare={() => onevent({ kind: 'share', clipId: clip.id })}
-          onunmute={() => (muted = !muted)}
+          onunmute={() => (muted = false)}
+          ontogglesound={() => (muted = !muted)}
           onglow={(c) => (glows[clip.id] = c)}
         />
       {/each}

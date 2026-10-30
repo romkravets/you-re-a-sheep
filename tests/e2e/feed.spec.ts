@@ -66,3 +66,37 @@ test('desktop shows centred column and keyboard works', async ({ page, isMobile 
   await page.keyboard.press('ArrowUp');
   await expect.poll(() => page.evaluate(() => (window as any).__feed.index())).toBe(0);
 });
+
+test('sound button toggles: unmutes on first tap, mutes on second', async ({ page }) => {
+  await page.goto(H);
+  const video = page.locator('video[data-clip-id="ph-1"]');
+  await expect(video).toHaveJSProperty('muted', true);
+  await page.getByTestId('sound').first().click();
+  await expect(video).toHaveJSProperty('muted', false);
+  await page.getByTestId('sound').first().click();
+  await expect(video).toHaveJSProperty('muted', true);
+});
+
+test('like tap does not unmute', async ({ page }) => {
+  await page.goto(H);
+  await page.getByTestId('like').first().click();
+  await expect(page.locator('video[data-clip-id="ph-1"]')).toHaveJSProperty('muted', true);
+});
+
+test('AbortError from play() does not downgrade the clip to poster', async ({ page }) => {
+  await page.addInitScript(() => {
+    HTMLMediaElement.prototype.play = () => Promise.reject(new DOMException('interrupted', 'AbortError'));
+  });
+  await page.goto(H);
+  await expect(page.getByTestId('poster-ph-1')).toBeVisible();
+  await expect(page.locator('video[data-clip-id="ph-1"]')).toHaveCount(1);
+});
+
+test('NotAllowedError from play() falls back to poster', async ({ page }) => {
+  await page.addInitScript(() => {
+    HTMLMediaElement.prototype.play = () => Promise.reject(new DOMException('blocked', 'NotAllowedError'));
+  });
+  await page.goto(H);
+  await expect(page.getByTestId('poster-ph-1')).toBeVisible();
+  await expect(page.locator('video[data-clip-id="ph-1"]')).toHaveCount(0);
+});
