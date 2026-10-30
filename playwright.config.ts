@@ -8,7 +8,7 @@ export default defineConfig({
   reporter: process.env.CI ? 'github' : 'list',
   use: { baseURL: 'http://localhost:4173' },
   webServer: {
-    command: 'npm run build && npx vite preview --port 4173',
+    command: 'npx vite build --mode test && npx vite preview --port 4173',
     url: 'http://localhost:4173',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

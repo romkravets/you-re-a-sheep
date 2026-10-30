@@ -16,6 +16,7 @@
     "@playwright/test": "1.64",
     "@sveltejs/vite-plugin-svelte": "^7.3.1",
     "@types/node": "^26.6.6",
+    "happy-dom": "^21.0.4",
     "svelte-check": "^4.7.7",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3",
