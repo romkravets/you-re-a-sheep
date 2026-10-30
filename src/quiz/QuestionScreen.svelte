@@ -27,6 +27,19 @@
   let whyChosen: Option['id'] | undefined = $state();
   let sent = false;
 
+  // Reset all per-question state when the parent reuses this instance for another question.
+  let lastId = question.id;
+  $effect.pre(() => {
+    const id = question.id;
+    if (id === lastId) return;
+    lastId = id;
+    step = 'pick';
+    chosen = undefined;
+    confidence = undefined;
+    whyChosen = undefined;
+    sent = false;
+  });
+
   const correct = $derived(chosen === question.correct);
 
   function pick(id: Option['id']) {

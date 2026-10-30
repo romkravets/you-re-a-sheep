@@ -98,4 +98,21 @@ test('desktop paper theme renders two columns', async ({ page, isMobile }) => {
   expect(cols).toBe(2);
 });
 
+test('state resets when the question prop changes on the same instance', async ({ page }) => {
+  await page.goto(H('recall'));
+  await page.keyboard.press('2');
+  await page.keyboard.press('3');
+  await page.keyboard.press('Enter');
+  await page.evaluate(() => (window as any).__setQuestion('herd'));
+  await expect(page.getByTestId('option-a')).toBeEnabled();
+  await expect(page.getByTestId('explanation')).toHaveCount(0);
+  await page.getByTestId('option-a').click();
+  await page.getByTestId('conf-maybe').click();
+  await page.getByTestId('why-a').click();
+  await page.getByTestId('next').click();
+  const a = await answers(page);
+  expect(a).toHaveLength(2);
+  expect(a[1]).toEqual({ questionId: 'q-herd', chosen: 'a', confidence: 'maybe', whyChosen: 'a' });
+});
+
 // enemy stamp and vanishing text: deferred past the pilot.

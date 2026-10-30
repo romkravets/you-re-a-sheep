@@ -3,6 +3,7 @@ import '../../src/styles/tokens.css';
 import '../../src/styles/base.css';
 import QuestionScreen from '../../src/quiz/QuestionScreen.svelte';
 import SheepMeter from '../../src/app/SheepMeter.svelte';
+import { harness } from './quiz-harness-state.svelte';
 import type { Answer, Question } from '../../src/lib/types';
 
 const opts = (t: string[]) => t.map((text, i) => ({ id: 'abcd'[i] as 'a', text }));
@@ -44,7 +45,7 @@ const questions: Record<string, Question> = {
 };
 
 const params = new URLSearchParams(location.search);
-const q = questions[params.get('q') ?? 'farm'];
+harness.question = questions[params.get('q') ?? 'farm'];
 const theme = (params.get('theme') ?? 'feed-stop') as 'feed-stop' | 'paper';
 
 const w = window as unknown as Record<string, unknown>;
@@ -52,6 +53,7 @@ w.__answers = [] as Answer[];
 
 mount(QuestionScreen, {
   target: document.getElementById('app')!,
-  props: { question: q, theme, index: 0, total: 3, onanswer: (a: Answer) => (w.__answers as Answer[]).push(a) },
+  props: { get question() { return harness.question; }, theme, index: 0, total: 3, onanswer: (a: Answer) => (w.__answers as Answer[]).push(a) },
 });
+w.__setQuestion = (name: string) => { harness.question = questions[name]; };
 mount(SheepMeter, { target: document.body, props: { value: Number(params.get('meter') ?? 40), theme } });
