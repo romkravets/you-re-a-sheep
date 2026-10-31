@@ -33,9 +33,22 @@ test('first paint is the feed', async ({ page }) => {
   await expect(page.getByText(/почати/i)).toHaveCount(0);
 });
 
-test('full run reaches verdict with a level', async ({ page }) => {
+async function toVerdict(page: Page) {
   await toReality(page);
   for (let i = 0; i < 3; i++) await answerOne(page);
+  await expect(page.getByTestId('reveal')).toBeVisible();
+  await page.clock.runFor(20000);
+}
+
+test('full run passes reveal (title only there) and reaches verdict', async ({ page }) => {
+  await toReality(page);
+  await expect(page.getByText("You're a sheep")).toHaveCount(0);
+  for (let i = 0; i < 3; i++) await answerOne(page);
+  await expect(page.getByTestId('reveal')).toBeVisible();
+  await expect(page.getByText("You're a sheep")).toHaveCount(0);
+  await page.clock.runFor(3500);
+  await expect(page.getByText("You're a sheep")).toBeVisible();
+  await page.clock.runFor(10000);
   await expect(page.getByTestId('level-name')).toHaveText(LEVELS);
   await expect(page.getByText('Це не IQ-тест')).toBeVisible();
 });
@@ -54,9 +67,16 @@ test('back button does not leave mid-test', async ({ page }) => {
   expect(new URL(page.url()).origin).toBe('http://localhost:4173');
 });
 
+test('back button at verdict stays', async ({ page }) => {
+  await toVerdict(page);
+  await expect(page.getByTestId('level-name')).toBeVisible();
+  await page.goBack();
+  await expect(page.getByTestId('level-name')).toBeVisible();
+  expect(new URL(page.url()).origin).toBe('http://localhost:4173');
+});
+
 test('retry starts a new run from the feed', async ({ page }) => {
-  await toReality(page);
-  for (let i = 0; i < 3; i++) await answerOne(page);
+  await toVerdict(page);
   await page.getByRole('button', { name: 'Пройти ще раз' }).click();
   await expect(page.getByTestId('feed')).toBeVisible();
   await expect(page.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0');

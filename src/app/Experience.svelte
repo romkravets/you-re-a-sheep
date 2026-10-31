@@ -8,12 +8,13 @@
   import Feed from '../feed/Feed.svelte';
   import QuestionScreen from '../quiz/QuestionScreen.svelte';
   import SheepMeter from './SheepMeter.svelte';
+  import Reveal from '../verdict/Reveal.svelte';
   import Verdict from '../verdict/Verdict.svelte';
 
   interface Props { content: Content }
   let { content }: Props = $props();
 
-  type Stage = 'feed1' | 'stop1' | 'reality' | 'verdict';
+  type Stage = 'feed1' | 'stop1' | 'reality' | 'reveal' | 'verdict';
   const FADE_MS = 600;
 
   function newSeed(first: boolean): number {
@@ -37,7 +38,7 @@
   const feedRound = $derived(session.rounds[0]);
   const questions = $derived(round.questions);
   const meter = $derived(sheepMeter(session, answers, feedEvents));
-  const result = $derived(stage === 'verdict' ? scoreRun(session, answers, feedEvents, content) : undefined);
+  const result = $derived(stage === 'reveal' || stage === 'verdict' ? scoreRun(session, answers, feedEvents, content) : undefined);
   const level = $derived(result ? levelFor(result.percent, content.levels) : undefined);
   const theme = $derived(stage === 'reality' ? 'paper' : 'feed-stop');
 
@@ -58,7 +59,7 @@
       return;
     }
     if (stage === 'stop1') crossfadeToReality();
-    else go('verdict');
+    else go('reveal');
   }
 
   function crossfadeToReality() {
@@ -80,7 +81,7 @@
   onMount(() => {
     history.replaceState({ stage }, '');
     const onpop = () => {
-      if (stage !== 'verdict') history.pushState({ stage }, '');
+      history.pushState({ stage }, '');
     };
     window.addEventListener('popstate', onpop);
     return () => {
@@ -96,11 +97,13 @@
   {/key}
 {:else if stage === 'stop1' || stage === 'reality'}
   <QuestionScreen question={questions[qIndex]} {theme} index={qIndex} total={questions.length} {onanswer} />
+{:else if stage === 'reveal'}
+  <Reveal ui={content.ui} oncontinue={() => go('verdict')} />
 {:else if result && level}
   <Verdict {result} {level} patterns={content.patterns} ui={content.ui} onretry={retry} />
 {/if}
 
-{#if stage !== 'verdict'}
+{#if stage !== 'verdict' && stage !== 'reveal'}
   <SheepMeter value={meter} theme={stage === 'reality' ? 'paper' : 'feed-stop'} />
 {/if}
 
