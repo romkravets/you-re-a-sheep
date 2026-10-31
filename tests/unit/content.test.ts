@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import fixtureJson from '../fixtures/content.min.json';
 import { validateContent, loadContent } from '../../src/lib/content';
+import { buildSession } from '../../src/lib/session';
 import type { Content, Question, ClipSet } from '../../src/lib/types';
 
 const fresh = (): Content => structuredClone(fixtureJson) as unknown as Content;
@@ -142,5 +143,16 @@ describe('validateContent', () => {
 
   it.skip('real content passes minimums', () => {
     expect(validateContent(loadContent(), { minimums: true })).toEqual([]);
+  });
+
+  it('pilot content is valid', () => {
+    const c = loadContent();
+    expect(c.episodes.length).toBeGreaterThan(0);
+    expect(c.levels).toHaveLength(5);
+    expect(validateContent(c)).toEqual([]);
+    for (let seed = 1; seed <= 50; seed++) {
+      const s = buildSession(c, seed, undefined, { pilot: true });
+      expect(s.rounds).toHaveLength(2);
+    }
   });
 });
