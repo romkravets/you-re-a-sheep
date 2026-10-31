@@ -87,16 +87,21 @@ export function scoreRun(session: Session, answers: Answer[], feedEvents: FeedEv
 
   const clips = allClips(session);
   const sharedTrap = (t: TrapKind) => feedEvents.some((e) => e.kind === 'share' && clips.get(e.clipId)?.trap === t);
+  // Order: confident-wrong, the first feed line, wrong answers, other feed lines, lucky guess, moreTime.
+  // The first feed line goes early so the cap can never drop every feed habit.
+  const feedLines: string[] = [];
+  if (sharedTrap('fake')) feedLines.push('Ти переслав фейк.');
+  if (sharedTrap('rage')) feedLines.push('Тебе розлютили — і ти поширив.');
+  if (feedEvents.some((e) => e.kind === 'like' && clips.get(e.clipId)?.trap === 'clickbait')) feedLines.push('Ти лайкнув клікбейт.');
+  if (feedEvents.some((e) => e.kind === 'dwell' && e.ms >= 3000 && ['clickbait', 'ad'].includes(clips.get(e.clipId)?.trap ?? ''))) {
+    feedLines.push('Ти завис на клікбейті.');
+  }
   const lines: string[] = [];
   if (g.confidentWrong >= 1) lines.push(`Ти був певен — і помилився ${g.confidentWrong} ${pluralRaz(g.confidentWrong)}.`);
+  lines.push(...feedLines.slice(0, 1));
   g.wrong.forEach((q) => lines.push(q.verdictLine));
+  lines.push(...feedLines.slice(1));
   if (g.lucky.length) lines.push('Ти вгадав, але не знав чому.');
-  if (sharedTrap('fake')) lines.push('Ти переслав фейк.');
-  if (sharedTrap('rage')) lines.push('Тебе розлютили — і ти поширив.');
-  if (feedEvents.some((e) => e.kind === 'like' && clips.get(e.clipId)?.trap === 'clickbait')) lines.push('Ти лайкнув клікбейт.');
-  if (feedEvents.some((e) => e.kind === 'dwell' && e.ms >= 3000 && ['clickbait', 'ad'].includes(clips.get(e.clipId)?.trap ?? ''))) {
-    lines.push('Ти завис на клікбейті.');
-  }
   if (g.moreTime) lines.push('Тобі знадобилось більше часу на читання.');
 
   return {
@@ -109,11 +114,15 @@ export function scoreRun(session: Session, answers: Answer[], feedEvents: FeedEv
   };
 }
 
-/** 0–100, rises with mistakes so far. */
+/**
+ * 0–100, rises with mistakes so far and never falls: the denominator is the whole session,
+ * not the answers given so far. The caller passes no feed events while the feed is still on,
+ * so the meter cannot give a trap away.
+ */
 export function sheepMeter(session: Session, answers: Answer[], feedEvents: FeedEvent[]): number {
   const g = grade(session, answers);
   const pen = penalties(session, feedEvents).reduce((s, p) => s + p.points, 0);
-  const answered = answers.length;
-  const v = Math.round((100 * (g.lost + pen)) / (POINTS * answered || 1));
+  const total = POINTS * allQuestions(session).length;
+  const v = Math.round((100 * (g.lost + pen)) / (total || 1));
   return Math.min(100, Math.max(0, v));
 }

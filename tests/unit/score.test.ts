@@ -88,21 +88,46 @@ describe('scoreRun', () => {
     const r = scoreRun(sess(Q), a, ev, content);
     expect(r.verdictLines).toEqual([
       'Ти був певен — і помилився 2 рази.',
+      'Ти переслав фейк.',
       'Лінія q0.',
       'Лінія q1.',
-      'Ти переслав фейк.',
     ]);
   });
-  it('orders lucky guess, rage, like, dwell, moreTime when no wrong answers', () => {
+  it('first feed line survives the cap: 3 wrong + confident + fake share + clickbait like', () => {
+    const Q = qs(10);
+    const ev: FeedEvent[] = [{ kind: 'like', clipId: 'cb' }, { kind: 'share', clipId: 'fk' }];
+    const r = scoreRun(sess(Q), ans(Q, [0, 1, 2], 'sure'), ev, content);
+    expect(r.verdictLines).toHaveLength(4);
+    expect(r.verdictLines).toContain('Ти переслав фейк.');
+    expect(r.verdictLines).toEqual([
+      'Ти був певен — і помилився 3 рази.',
+      'Ти переслав фейк.',
+      'Лінія q0.',
+      'Лінія q1.',
+    ]);
+  });
+  it('remaining feed lines come after wrong answers, then lucky guess, then moreTime', () => {
+    const Q = [q('w', 'detail', true), ...qs(9)].map((x, i) => (i === 0 ? x : { ...x, id: `z${i}` }));
+    const a = ans(Q, [1]); a[0].whyChosen = 'b'; a[2].moreTime = true;
+    const ev: FeedEvent[] = [{ kind: 'like', clipId: 'cb' }, { kind: 'share', clipId: 'rg' }];
+    const r = scoreRun(sess(Q), a, ev, content);
+    expect(r.verdictLines).toEqual([
+      'Тебе розлютили — і ти поширив.',
+      'Лінія q0.', // z1 keeps q0's verdictLine
+      'Ти лайкнув клікбейт.',
+      'Ти вгадав, але не знав чому.',
+    ]);
+  });
+  it('orders rage, like, dwell, then lucky guess when no wrong answers', () => {
     const Q = [q('w', 'detail', true), ...qs(9)].map((x, i) => (i === 0 ? x : { ...x, id: `z${i}` }));
     const a = ans(Q); a[0].whyChosen = 'b'; a[1].moreTime = true;
     const ev: FeedEvent[] = [{ kind: 'share', clipId: 'rg' }, { kind: 'like', clipId: 'cb' }, { kind: 'dwell', clipId: 'cb', ms: 4000 }];
     const r = scoreRun(sess(Q), a, ev, content);
     expect(r.verdictLines).toEqual([
-      'Ти вгадав, але не знав чому.',
       'Тебе розлютили — і ти поширив.',
       'Ти лайкнув клікбейт.',
       'Ти завис на клікбейті.',
+      'Ти вгадав, але не знав чому.',
     ]);
   });
   it('lucky guess scores 5', () => {
@@ -164,17 +189,35 @@ describe('scoreRun', () => {
 });
 
 describe('sheepMeter', () => {
-  it('starts at 0 and is 100 after one wrong answer', () => {
+  it('starts at 0; denominator is 10 × all questions in the session', () => {
     const Q = qs(10);
     expect(sheepMeter(sess(Q), [], [])).toBe(0);
-    expect(sheepMeter(sess(Q), ans(Q.slice(0, 1), [0]), [])).toBe(100);
-    expect(sheepMeter(sess(Q), ans(Q.slice(0, 2), [0]), [])).toBe(50);
+    expect(sheepMeter(sess(Q), ans(Q.slice(0, 1), [0]), [])).toBe(10);
+    expect(sheepMeter(sess(Q), ans(Q.slice(0, 2), [0]), [])).toBe(10);
+  });
+  it('a feed penalty with zero answers does not produce 100', () => {
+    const Q = qs(10);
+    const v = sheepMeter(sess(Q), [], [{ kind: 'share', clipId: 'fk' }]);
+    expect(v).toBe(5);
+    expect(v).toBeLessThan(100);
   });
   it('counts penalties and lucky guesses', () => {
     const Q = [q('w', 'detail', true), ...qs(3).map((x, i) => ({ ...x, id: `z${i}` }))];
     const a = ans(Q.slice(0, 1)); a[0].whyChosen = 'b';
-    expect(sheepMeter(sess(Q), a, [])).toBe(50);
-    expect(sheepMeter(sess(Q), [], [{ kind: 'share', clipId: 'fk' }])).toBe(100);
+    expect(sheepMeter(sess(Q), a, [])).toBe(13);
+    expect(sheepMeter(sess(Q), a, [{ kind: 'share', clipId: 'fk' }])).toBe(25);
+  });
+  it('is monotonic non-decreasing over a sequence of answers', () => {
+    const Q = qs(6);
+    const all = ans(Q, [1, 4], 'sure');
+    const ev: FeedEvent[] = [{ kind: 'share', clipId: 'fk' }];
+    let prev = sheepMeter(sess(Q), [], ev);
+    for (let n = 1; n <= Q.length; n++) {
+      const v = sheepMeter(sess(Q), all.slice(0, n), ev);
+      expect(v).toBeGreaterThanOrEqual(prev);
+      prev = v;
+    }
+    expect(prev).toBe(Math.round((100 * 25) / 60));
   });
 });
 
