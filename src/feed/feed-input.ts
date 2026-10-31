@@ -51,6 +51,9 @@ export function createFeedInput(el: HTMLElement, handlers: FeedInputHandlers): (
 
   const onKey = (e: KeyboardEvent) => {
     if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
+    // Space/Enter on a focused like/share/sound button press that button, not the feed.
+    const onButton = e.target instanceof Element && e.target.closest('button') !== null;
+    if (onButton && (e.key === ' ' || e.key === 'Enter')) return;
     switch (e.key) {
       case 'ArrowDown':
       case 'PageDown':

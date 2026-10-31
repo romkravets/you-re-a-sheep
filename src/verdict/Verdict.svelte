@@ -16,7 +16,7 @@
     <p class="percent" data-testid="percent">{result.percent}% {ui.percentLabel}</p>
     <p class="description">{level.description}</p>
     {#if pattern}
-      <p class="pattern" data-testid="pattern"><span>{ui.patternPrefix}</span> <strong>{pattern.line}</strong></p>
+      <p class="pattern" data-testid="pattern"><span class="prefix">{ui.patternPrefix}</span> <strong>{pattern.line}</strong></p>
     {/if}
     <ul class="lines">
       {#each result.verdictLines as line (line)}<li>{line}</li>{/each}
@@ -35,7 +35,7 @@
   .percent { font-size: 1.4rem; font-weight: 700; margin: 0; }
   .description { margin: 0; line-height: 1.55; font-size: 1.05rem; }
   .pattern { margin: 0.4rem 0; padding: 0.8rem 0 0.8rem 1rem; border-left: 4px solid var(--poster-red); font-size: 1.3rem; line-height: 1.4; }
-  .pattern span { display: block; font-size: 0.9rem; color: var(--ink-soft); }
+  .pattern .prefix { color: var(--ink-soft); }
   .pattern strong { font-weight: 700; }
   .lines { list-style: disc; padding-left: 1.2rem; margin: 0; display: grid; gap: 0.4rem; line-height: 1.5; }
   .disclaimer { opacity: 0.7; font-style: italic; margin: 0.6rem 0 0; }

@@ -13,7 +13,7 @@
       <p>{after}</p>
     </article>
   {:else}
-    <div class="pair">
+    <div class="pair" data-reveal>
       <section>
         <h3>Було</h3>
         <p data-testid="diff-before">

@@ -71,6 +71,22 @@ describe('createFeedInput', () => {
     expect(prev).toHaveBeenCalledTimes(1);
   });
 
+  it('Space/Enter on a focused button inside the feed activates the button, not the feed', () => {
+    const btn = document.createElement('button');
+    const icon = document.createElement('span');
+    btn.appendChild(icon);
+    el.appendChild(btn);
+    for (const key of [' ', 'Enter']) {
+      const e = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+      btn.dispatchEvent(e);
+      expect(e.defaultPrevented).toBe(false);
+      icon.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+    }
+    expect(next).not.toHaveBeenCalled();
+    btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true }));
+    expect(next).toHaveBeenCalledTimes(1);
+  });
+
   it('5 wheel events within 300ms call next once', async () => {
     for (let i = 0; i < 5; i++) {
       el.dispatchEvent(new WheelEvent('wheel', { deltaY: 100, bubbles: true, cancelable: true }));

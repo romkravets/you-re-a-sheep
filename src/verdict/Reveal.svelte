@@ -8,14 +8,17 @@
   let { ui, oncontinue }: Props = $props();
 
   const AUTO_MS = 4000;
+  // A double tap on «Далі →» or a held Enter from the last question must not skip the reveal.
+  const GUARD_MS = 600;
   const sentences = $derived(ui.reveal.split(/(?<=[.!?])\s+/).filter(Boolean));
   let root: HTMLElement;
   let showTitle = $state(false);
   let done = false;
+  let ready = false;
   let autoTimer: ReturnType<typeof setTimeout> | undefined;
 
   function proceed() {
-    if (done) return;
+    if (done || !ready) return;
     done = true;
     clearTimeout(autoTimer);
     oncontinue();
@@ -26,7 +29,9 @@
   }
 
   onMount(() => {
+    const guard = setTimeout(() => (ready = true), GUARD_MS);
     const onkey = (e: KeyboardEvent) => {
+      if (e.repeat) return;
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
         proceed();
@@ -53,6 +58,7 @@
     }
     return () => {
       window.removeEventListener('keydown', onkey);
+      clearTimeout(guard);
       clearTimeout(autoTimer);
       ctx?.revert();
     };

@@ -68,7 +68,7 @@ test('wrong why shows lucky-guess explanation and onanswer receives whyChosen', 
 
 test('herd shows crowd hint and reveal line appended', async ({ page }) => {
   await page.goto(H('herd'));
-  await expect(page.getByTestId('option-c')).toContainText('👥 87%');
+  await expect(page.getByTestId('option-c')).toContainText('👥 87% обрали це');
   await page.getByTestId('option-c').click();
   await page.getByTestId('conf-sure').click();
   await expect(page.getByTestId('explanation')).toContainText('Цієї цифри не було — це пастка.');
@@ -116,3 +116,22 @@ test('state resets when the question prop changes on the same instance', async (
 });
 
 // enemy stamp and vanishing text: deferred past the pilot.
+
+test('each new step scrolls into view on a short screen', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 420 });
+  await page.goto(H('farm'));
+  await page.getByTestId('option-a').click();
+  await expect(page.getByTestId('conf-maybe')).toBeInViewport();
+  await page.getByTestId('conf-maybe').click();
+  await expect(page.getByTestId('why-a')).toBeInViewport();
+  await page.getByTestId('why-b').click();
+  await expect(page.getByTestId('explanation')).toBeInViewport();
+});
+
+test('rewritten: Було/Стало scrolls into view after the answer', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 420 });
+  await page.goto(H('rewritten', 'paper'));
+  await page.getByTestId('option-a').click();
+  await page.getByTestId('conf-maybe').click();
+  await expect(page.getByTestId('diff-after')).toBeInViewport();
+});

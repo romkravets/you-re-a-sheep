@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { prefersReducedMotion } from '../lib/motion';
   import type { Answer, Confidence, Option, Question } from '../lib/types';
   import Explanation from './Explanation.svelte';
   import Telegram from './materials/Telegram.svelte';
@@ -10,9 +11,11 @@
     theme: 'feed-stop' | 'paper';
     index: number;
     total: number;
+    /** ui.json herdPicked, e.g. «{n}% обрали це». */
+    herdLabel: string;
     onanswer: (a: Answer) => void;
   }
-  let { question, theme, index, total, onanswer }: Props = $props();
+  let { question, theme, index, total, herdLabel, onanswer }: Props = $props();
 
   type Step = 'pick' | 'confidence' | 'why' | 'explain';
   const CONF: { id: Confidence; label: string }[] = [
@@ -41,6 +44,14 @@
   });
 
   const correct = $derived(chosen === question.correct);
+
+  // Bring each new step (confidence, why, explanation, Було/Стало) into view on short screens.
+  let root: HTMLElement;
+  $effect(() => {
+    if (step === 'pick') return;
+    const target = (step === 'explain' && root.querySelector('[data-reveal]')) || root.querySelector('[data-step]');
+    target?.scrollIntoView({ block: 'nearest', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+  });
 
   function pick(id: Option['id']) {
     if (step !== 'pick') return;
@@ -84,7 +95,7 @@
   });
 </script>
 
-<main class="screen {theme}" data-testid="question-screen">
+<main class="screen {theme}" data-testid="question-screen" bind:this={root}>
   <div class="grid" data-testid="grid" class:single={!question.material}>
     {#if question.material}
       <div class="page left">
@@ -105,29 +116,31 @@
           <li>
             <button type="button" data-testid="option-{o.id}" class:chosen={chosen === o.id} disabled={step !== 'pick'} onclick={() => pick(o.id)}>
               <kbd>{i + 1}</kbd><span>{o.text}</span>
-              {#if question.herd?.option === o.id}<span class="herd">👥 {question.herd.percent}%</span>{/if}
+              {#if question.herd?.option === o.id}<span class="herd">👥 {herdLabel.replace('{n}', String(question.herd.percent))}</span>{/if}
             </button>
           </li>
         {/each}
       </ol>
 
-      {#if step === 'confidence'}
-        <h2>Наскільки ти впевнений?</h2>
-        <div class="row">
-          {#each CONF as c, i (c.id)}
-            <button type="button" data-testid="conf-{c.id}" onclick={() => setConfidence(c.id)}><kbd>{i + 1}</kbd>{c.label}</button>
-          {/each}
-        </div>
-      {:else if step === 'why' && question.why}
-        <h2>Так. А чому?</h2>
-        <ol class="options">
-          {#each question.why.options as o, i (o.id)}
-            <li><button type="button" data-testid="why-{o.id}" onclick={() => pickWhy(o.id)}><kbd>{i + 1}</kbd><span>{o.text}</span></button></li>
-          {/each}
-        </ol>
-      {:else if step === 'explain' && chosen}
-        <Explanation {question} {chosen} {whyChosen} onnext={next} />
-      {/if}
+      <div data-step>
+        {#if step === 'confidence'}
+          <h2>Наскільки ти впевнений?</h2>
+          <div class="row">
+            {#each CONF as c, i (c.id)}
+              <button type="button" data-testid="conf-{c.id}" onclick={() => setConfidence(c.id)}><kbd>{i + 1}</kbd>{c.label}</button>
+            {/each}
+          </div>
+        {:else if step === 'why' && question.why}
+          <h2>Так. А чому?</h2>
+          <ol class="options">
+            {#each question.why.options as o, i (o.id)}
+              <li><button type="button" data-testid="why-{o.id}" onclick={() => pickWhy(o.id)}><kbd>{i + 1}</kbd><span>{o.text}</span></button></li>
+            {/each}
+          </ol>
+        {:else if step === 'explain' && chosen}
+          <Explanation {question} {chosen} {whyChosen} onnext={next} />
+        {/if}
+      </div>
     </div>
   </div>
 </main>
@@ -148,7 +161,7 @@
   .row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
   .row button { justify-content: center; }
   kbd { font: 0.75rem var(--font-feed); opacity: 0.55; }
-  .herd { margin-left: auto; opacity: 0.8; }
+  .herd { margin-left: auto; opacity: 0.8; white-space: nowrap; }
   @media (min-width: 900px) {
     .paper .grid:not(.single) { grid-template-columns: 1fr 1fr; gap: 3rem; }
     .paper .left { border-right: 1px solid var(--rule); padding-right: 3rem; }
