@@ -67,12 +67,36 @@ test('back button does not leave mid-test', async ({ page }) => {
   expect(new URL(page.url()).origin).toBe('http://localhost:4173');
 });
 
-test('back button at verdict stays', async ({ page }) => {
+test('back button after the test behaves normally (leaves the app)', async ({ page }) => {
+  await page.goto('about:blank');
   await toVerdict(page);
   await expect(page.getByTestId('level-name')).toBeVisible();
-  await page.goBack();
-  await expect(page.getByTestId('level-name')).toBeVisible();
-  expect(new URL(page.url()).origin).toBe('http://localhost:4173');
+  await page.goBack().catch(() => null);
+  await expect.poll(() => page.url()).toBe('about:blank');
+});
+
+test('feed traps do not move the meter during the feed and reach the verdict', async ({ page }) => {
+  await page.clock.install();
+  await page.goto('/?seed=123');
+  await expect(page.getByTestId('feed')).toBeVisible();
+  await page.getByTestId('clip-p1-clickbait').getByTestId('like').dispatchEvent('click');
+  await page.getByTestId('clip-p1-fake').getByTestId('share').dispatchEvent('click');
+  await expect(page.getByTestId('clip-p1-fake').getByTestId('share')).toHaveAttribute('aria-pressed', 'true');
+  const meter = page.getByRole('progressbar');
+  await expect(meter).toHaveAttribute('aria-valuenow', '0');
+  await page.clock.runFor(4000);
+  await expect(page.getByTestId('feed')).toBeVisible();
+  await expect(meter).toHaveAttribute('aria-valuenow', '0');
+  await page.clock.runFor(FEED_MS);
+  await expect(page.getByTestId('question-screen')).toBeVisible();
+  await expect(meter).not.toHaveAttribute('aria-valuenow', '0');
+  for (let i = 0; i < 3; i++) await answerOne(page);
+  await page.clock.runFor(700);
+  await expect(page.getByTestId('question-screen')).toHaveClass(/paper/);
+  for (let i = 0; i < 3; i++) await answerOne(page);
+  await expect(page.getByTestId('reveal')).toBeVisible();
+  await page.clock.runFor(20000);
+  await expect(page.getByTestId('verdict')).toContainText('Ти переслав фейк.');
 });
 
 test('retry starts a new run from the feed', async ({ page }) => {

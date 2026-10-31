@@ -37,15 +37,21 @@
   const round = $derived(stage === 'stop1' ? session.rounds[0] : session.rounds[session.rounds.length - 1]);
   const feedRound = $derived(session.rounds[0]);
   const questions = $derived(round.questions);
-  const meter = $derived(sheepMeter(session, answers, feedEvents));
+  // Feed penalties reach the meter only after the feed ends, so it cannot flag a trap live.
+  const meter = $derived(sheepMeter(session, answers, stage === 'feed1' ? [] : feedEvents));
   const result = $derived(stage === 'reveal' || stage === 'verdict' ? scoreRun(session, answers, feedEvents, content) : undefined);
   const level = $derived(result ? levelFor(result.percent, content.levels) : undefined);
   const theme = $derived(stage === 'reality' ? 'paper' : 'feed-stop');
+
+  // Back is held only mid-test; after it (reveal, verdict) Back leaves the app normally.
+  const TRAPPED: Stage[] = ['feed1', 'stop1', 'reality'];
+  let pushed = 0; // history entries this run added on top of the entry the app loaded in
 
   function go(next: Stage) {
     stage = next;
     qIndex = 0;
     history.pushState({ stage: next }, '');
+    pushed += 1;
   }
 
   function onfeedDone() {
@@ -81,7 +87,14 @@
   onMount(() => {
     history.replaceState({ stage }, '');
     const onpop = () => {
-      history.pushState({ stage }, '');
+      if (TRAPPED.includes(stage)) {
+        history.pushState({ stage }, '');
+        return;
+      }
+      // Skip our own same-page entries in one step, so a single Back leaves the app
+      // (a no-op when the app was the first page in this tab).
+      pushed = Math.max(0, pushed - 1);
+      history.go(-(pushed + 1));
     };
     window.addEventListener('popstate', onpop);
     return () => {
