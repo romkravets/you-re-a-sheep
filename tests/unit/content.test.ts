@@ -155,4 +155,9 @@ describe('validateContent', () => {
       expect(s.rounds).toHaveLength(2);
     }
   });
+
+  it('explanations read well after a right answer too (no «you failed» phrasing)', () => {
+    const failed = /тебе (підштовхнул|надурил|обдурил)|в пам'яті лишилось|ти не помітив|ти дивився/i;
+    for (const x of qs(loadContent())) expect(x.explanation, x.id).not.toMatch(failed);
+  });
 });
