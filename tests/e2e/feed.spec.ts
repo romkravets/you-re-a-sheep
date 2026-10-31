@@ -100,3 +100,23 @@ test('NotAllowedError from play() falls back to poster', async ({ page }) => {
   await expect(page.getByTestId('poster-ph-1')).toBeVisible();
   await expect(page.locator('video[data-clip-id="ph-1"]')).toHaveCount(0);
 });
+
+test('NotAllowedError on unmuted play() retries muted and keeps the video (iOS)', async ({ page }) => {
+  await page.addInitScript(() => {
+    const real = HTMLMediaElement.prototype.play;
+    HTMLMediaElement.prototype.play = function (this: HTMLMediaElement) {
+      if (this.muted === false) return Promise.reject(new DOMException('needs muted', 'NotAllowedError'));
+      return real.call(this);
+    };
+  });
+  await page.goto(H);
+  const video = page.locator('video[data-clip-id="ph-1"]');
+  await expect(video).toHaveCount(1);
+  await page.getByTestId('sound').first().click();
+  await page.keyboard.press('ArrowDown');
+  await expect.poll(() => page.evaluate(() => (window as any).__feed.index())).toBe(1);
+  const v2 = page.locator('video[data-clip-id="ph-2"]');
+  await expect(v2).toHaveCount(1);
+  await expect(v2).toHaveJSProperty('muted', true);
+  await expect(v2).toHaveClass(/on/);
+});

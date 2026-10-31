@@ -29,14 +29,27 @@
     if (shared) onshare();
   };
 
+  const errName = (err: unknown) => (err as { name?: string })?.name;
+
   // Play only the active clip; a rejected play() just leaves the poster up.
   $effect(() => {
     if (!video) return;
     if (active && !failed) {
-      video.currentTime = 0;
-      video.play().catch((err: unknown) => {
+      const v = video;
+      v.currentTime = 0;
+      v.play().catch((err: unknown) => {
         // pause() from a fast swipe rejects play() with AbortError: not a real failure.
-        if ((err as { name?: string })?.name !== 'AbortError') failed = true;
+        if (errName(err) === 'AbortError') return;
+        // iOS refuses unmuted autoplay without a fresh tap: retry once muted before giving up.
+        if (errName(err) === 'NotAllowedError' && !v.muted) {
+          v.muted = true;
+          if (!muted) ontogglesound(); // keep the sound button honest
+          v.play().catch((e2: unknown) => {
+            if (errName(e2) !== 'AbortError') failed = true;
+          });
+          return;
+        }
+        failed = true;
       });
     } else {
       video.pause();
