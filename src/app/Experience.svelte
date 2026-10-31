@@ -97,7 +97,7 @@
 {:else if stage === 'stop1' || stage === 'reality'}
   <QuestionScreen question={questions[qIndex]} {theme} index={qIndex} total={questions.length} {onanswer} />
 {:else if result && level}
-  <Verdict {result} {level} patterns={content.patterns} onretry={retry} />
+  <Verdict {result} {level} patterns={content.patterns} ui={content.ui} onretry={retry} />
 {/if}
 
 {#if stage !== 'verdict'}
