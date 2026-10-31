@@ -4,11 +4,15 @@ import '../../src/styles/base.css';
 import Feed from '../../src/feed/Feed.svelte';
 import type { Clip, ClipSet, FeedEvent } from '../../src/lib/types';
 
+// Fixture clips live under tests/ and are bundled only into the test-mode harness, never into dist/ of production.
+const files = import.meta.glob<string>('../fixtures/clips/ph-*', { eager: true, query: '?url', import: 'default' });
+const url = (name: string) => files[`../fixtures/clips/${name}`];
+
 const clips: Clip[] = Array.from({ length: 8 }, (_, i) => ({
   id: `ph-${i + 1}`,
-  webm: `/clips/ph-${i + 1}.webm`,
-  mp4: `/clips/ph-${i + 1}.mp4`,
-  poster: `/clips/ph-${i + 1}.jpg`,
+  webm: url(`ph-${i + 1}.webm`),
+  mp4: url(`ph-${i + 1}.mp4`),
+  poster: url(`ph-${i + 1}.jpg`),
   handle: `user_${i + 1}`,
   caption: `Підпис до кліпу ${i + 1} #fyp`,
   likes: '12.4K',
