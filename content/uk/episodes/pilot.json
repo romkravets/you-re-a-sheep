@@ -1,0 +1,238 @@
+{
+  "id": "pilot",
+  "date": "2026-10-31",
+  "clipSets": [
+    {
+      "id": "pilot-r1",
+      "round": 1,
+      "questionIds": ["pilot-cats", "pilot-fake", "pilot-clickbait"],
+      "rewrite": { "clipId": "p1-rink", "questionId": "pilot-rewrite" },
+      "clips": [
+        {
+          "id": "p1-cats",
+          "webm": "/clips/p1-cats.webm",
+          "mp4": "/clips/p1-cats.mp4",
+          "poster": "/clips/p1-cats.jpg",
+          "handle": "murchyk.i.ko",
+          "caption": "коробка одна. хто перший сів — того й коробка 📦😤 #коти #котики #fyp",
+          "likes": "48.2K",
+          "comments": "612",
+          "shares": "3.1K",
+          "license": { "source": "placeholder", "url": "https://example.com", "license": "placeholder" }
+        },
+        {
+          "id": "p1-fake",
+          "webm": "/clips/p1-fake.webm",
+          "mp4": "/clips/p1-fake.mp4",
+          "poster": "/clips/p1-fake.jpg",
+          "handle": "tvoi.novyny.shvydko",
+          "caption": "перешліть всім кого знаєте 🙏🙏 поки не видалили #терміново #новини #рекомендації",
+          "likes": "21.7K",
+          "comments": "2.4K",
+          "shares": "15.9K",
+          "overlay": "ТЕРМІНОВО‼️ З понеділка ВСІ месенджери вимикають на 3 дні. Перешли своїм, поки не видалили!!!",
+          "trap": "fake",
+          "license": { "source": "placeholder", "url": "https://example.com", "license": "placeholder" }
+        },
+        {
+          "id": "p1-dog",
+          "webm": "/clips/p1-dog.webm",
+          "mp4": "/clips/p1-dog.mp4",
+          "poster": "/clips/p1-dog.jpg",
+          "handle": "barsik_skate",
+          "caption": "він катається краще за мене і мені не соромно 🛹🐶 #пес #скейт",
+          "likes": "103K",
+          "comments": "1.8K",
+          "shares": "7.4K",
+          "license": { "source": "placeholder", "url": "https://example.com", "license": "placeholder" }
+        },
+        {
+          "id": "p1-clickbait",
+          "webm": "/clips/p1-clickbait.webm",
+          "mp4": "/clips/p1-clickbait.mp4",
+          "poster": "/clips/p1-clickbait.jpg",
+          "handle": "nauka.shok",
+          "caption": "мама, я тепер їм морозиво ДЛЯ ЗДОРОВ'Я 🍦😂 #наука #факти",
+          "likes": "67.5K",
+          "comments": "3.3K",
+          "shares": "11.2K",
+          "overlay": "ВЧЕНІ В ШОЦІ 😱 Морозиво щодня = +7 років життя (дослідження на 9 хом'яках)",
+          "trap": "clickbait",
+          "license": { "source": "placeholder", "url": "https://example.com", "license": "placeholder" }
+        },
+        {
+          "id": "p1-rage",
+          "webm": "/clips/p1-rage.webm",
+          "mp4": "/clips/p1-rage.mp4",
+          "poster": "/clips/p1-rage.jpg",
+          "handle": "pravda.bez.cenzury",
+          "caption": "ПОШИРТЕ, хай усі знають!!! 😡😡😡 таких треба позбавляти прав #обурення #водії",
+          "likes": "89.1K",
+          "comments": "14.6K",
+          "shares": "32.8K",
+          "overlay": "Водій НАВМИСНО облив дітей з калюжі біля школи — і ще й сміявся 🤬",
+          "trap": "rage",
+          "license": { "source": "placeholder", "url": "https://example.com", "license": "placeholder" }
+        },
+        {
+          "id": "p1-rink",
+          "webm": "/clips/p1-rink.webm",
+          "mp4": "/clips/p1-rink.mp4",
+          "poster": "/clips/p1-rink.jpg",
+          "handle": "misto.vyhidni",
+          "caption": "хто з нами? ⛸️❄️ кличте друзів #каток #зима",
+          "likes": "5.6K",
+          "comments": "214",
+          "shares": "980",
+          "overlay": "Каток у центральному парку відкривається 1 грудня 🎉 Вхід для школярів — безкоштовний ⛸️",
+          "license": { "source": "placeholder", "url": "https://example.com", "license": "placeholder" }
+        },
+        {
+          "id": "p1-ad",
+          "webm": "/clips/p1-ad.webm",
+          "mp4": "/clips/p1-ad.mp4",
+          "poster": "/clips/p1-ad.jpg",
+          "handle": "dr.chysta.shkira",
+          "caption": "я дерматолог з 12-річним стажем, і ось що вам не розкажуть 🤫 #шкіра #прищі #догляд",
+          "likes": "34.9K",
+          "comments": "1.1K",
+          "shares": "2.7K",
+          "overlay": "Прищі зникнуть за 5 днів БЕЗ кремів ✨ Мій метод — у курсі, посилання в описі профілю 👆",
+          "trap": "ad",
+          "license": { "source": "placeholder", "url": "https://example.com", "license": "placeholder" }
+        },
+        {
+          "id": "p1-real",
+          "webm": "/clips/p1-real.webm",
+          "mp4": "/clips/p1-real.mp4",
+          "poster": "/clips/p1-real.jpg",
+          "handle": "fakty.yaki.lamayut",
+          "caption": "я перевірив і досі не вірю 🤯🐙 #факти #тварини #рекомендації",
+          "likes": "212K",
+          "comments": "5.2K",
+          "shares": "19.4K",
+          "overlay": "ФАКТ, ЯКИЙ ЗЛАМАЄ ТОБІ МОЗОК 🤯 У восьминога ТРИ серця і БЛАКИТНА кров 🐙",
+          "trap": "real",
+          "license": { "source": "placeholder", "url": "https://example.com", "license": "placeholder" }
+        }
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "id": "pilot-cats",
+      "type": "recall",
+      "prompt": "Скільки котів було у відео з коробкою?",
+      "options": [
+        { "id": "a", "text": "Один" },
+        { "id": "b", "text": "Два" },
+        { "id": "c", "text": "Три" }
+      ],
+      "correct": "b",
+      "skill": "detail",
+      "explanation": "Два коти. Стрічка привчає ловити настрій ролика, а не те, що в кадрі: «щось про котиків» запам'ятати легко, а скільки їх було — значно важче.",
+      "verdictLine": "Ти не порахував котів, на яких дивився."
+    },
+    {
+      "id": "pilot-fake",
+      "type": "recall",
+      "prompt": "Що не так з новиною про те, що вимкнуть месенджери?",
+      "options": [
+        { "id": "a", "text": "Не сказано, хто це вирішив і звідки інформація" },
+        { "id": "b", "text": "Не вказано, о котрій годині їх вимкнуть" },
+        { "id": "c", "text": "Нічого, краще переслати рідним про всяк випадок" }
+      ],
+      "correct": "a",
+      "skill": "source",
+      "explanation": "Ні джерела, ні того, хто вирішив, — тільки «перешли, поки не видалили». Так виглядає дуже багато фейків, і 15,9 тисячі людей його вже рознесли.",
+      "verdictLine": "Ти бачив фейк і не помітив."
+    },
+    {
+      "id": "pilot-clickbait",
+      "type": "recall",
+      "prompt": "На кому перевіряли, що морозиво додає 7 років життя?",
+      "options": [
+        { "id": "a", "text": "На 9 хом'яках" },
+        { "id": "b", "text": "На 900 добровольцях" },
+        { "id": "c", "text": "Там не було сказано" }
+      ],
+      "correct": "a",
+      "skill": "detail",
+      "explanation": "На дев'яти хом'яках — це було написано в дужках наприкінці. Заголовок пишуть, щоб клікнули, а дужки — щоб потім ніхто не сказав, що збрехали.",
+      "verdictLine": "Ти прочитав заголовок і пропустив дрібний шрифт."
+    },
+    {
+      "id": "pilot-rewrite",
+      "type": "rewritten",
+      "prompt": "Ти бачив цей пост у стрічці. Що в ньому змінилось?",
+      "material": {
+        "kind": "rewritten",
+        "channel": "misto.vyhidni",
+        "before": "Каток у центральному парку відкривається 1 грудня 🎉 Вхід для школярів — безкоштовний ⛸️",
+        "after": "Каток у центральному парку відкривається 15 грудня 🎉 Вхід для школярів — безкоштовний ⛸️"
+      },
+      "options": [
+        { "id": "a", "text": "Дата відкриття" },
+        { "id": "b", "text": "Ціна для школярів" },
+        { "id": "c", "text": "Нічого не змінилось" }
+      ],
+      "correct": "a",
+      "skill": "detail",
+      "why": {
+        "options": [
+          { "id": "a", "text": "Я запам'ятав дату з першого посту" },
+          { "id": "b", "text": "Здалося, що дата була інша" },
+          { "id": "c", "text": "Такі пости завжди потім редагують" }
+        ],
+        "correct": "a"
+      },
+      "explanation": "Було 1 грудня, стало 15 грудня. Одна цифра — і більшість уже не певна, чи пост змінили, чи вони самі забули. На цьому сумніві й тримаються ті, хто тихо переписує.",
+      "verdictLine": "Тобі тихо переписали пост, а ти повірив екрану, а не собі."
+    },
+    {
+      "id": "pilot-herd",
+      "type": "herd",
+      "prompt": "Батон і жуйка разом коштують 110 грн. Батон на 100 грн дорожчий за жуйку. Скільки коштує жуйка?",
+      "options": [
+        { "id": "a", "text": "10 грн" },
+        { "id": "b", "text": "5 грн" },
+        { "id": "c", "text": "55 грн" }
+      ],
+      "correct": "b",
+      "herd": { "option": "a", "percent": 87 },
+      "skill": "herd",
+      "why": {
+        "options": [
+          { "id": "a", "text": "Тоді батон — 105, і разом рівно 110" },
+          { "id": "b", "text": "Більшість обрала 10 — значить, це пастка" },
+          { "id": "c", "text": "110 мінус 100 — це 10, отже жуйка коштує 10" }
+        ],
+        "correct": "a"
+      },
+      "explanation": "Жуйка — 5, батон — 105, разом 110. «10 грн» — перша цифра, що спадає на думку майже всім, а «87%» штовхають туди, куди мозок і так біжить найлегшим шляхом.",
+      "verdictLine": "Ти пішов за натовпом — а натовп був вигаданий."
+    },
+    {
+      "id": "pilot-farm",
+      "type": "farm",
+      "prompt": "Чому стрічка ніколи не закінчується?",
+      "options": [
+        { "id": "a", "text": "Бо в інтернеті просто дуже багато відео" },
+        { "id": "b", "text": "Бо кожна твоя хвилина в стрічці — це гроші для платформи" },
+        { "id": "c", "text": "Бо алгоритм хоче показати тобі все найцікавіше" }
+      ],
+      "correct": "b",
+      "skill": "motive",
+      "why": {
+        "options": [
+          { "id": "a", "text": "Платформа платить авторам за кожен перегляд" },
+          { "id": "b", "text": "Що довше я гортаю, то більше реклами мені продадуть" },
+          { "id": "c", "text": "Відео безкоштовні, тож платформа живе з донатів" }
+        ],
+        "correct": "b"
+      },
+      "explanation": "Ти тут не клієнт, а товар: рекламодавці купують твій час і увагу. Кінець стрічки — це місце, де ти пішов би, тому його й немає.",
+      "verdictLine": "Ти не питаєш, хто заробляє на тому, що ти гортаєш стрічку."
+    }
+  ]
+}
