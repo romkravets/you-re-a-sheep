@@ -1,4 +1,7 @@
 import './styles/tokens.css';
 import './styles/base.css';
+import { mount } from 'svelte';
+import Experience from './app/Experience.svelte';
+import { loadContent } from './lib/content';
 
-// Later tasks mount <Experience /> into #app.
+mount(Experience, { target: document.getElementById('app')!, props: { content: loadContent() } });
