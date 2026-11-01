@@ -1,8 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { prefersReducedMotion } from '../lib/motion';
-  import type { Answer, Confidence, Option, Question } from '../lib/types';
+  import type { Answer, Confidence, Option, PressItem, Question } from '../lib/types';
   import Explanation from './Explanation.svelte';
+  import PressBackdrop from './PressBackdrop.svelte';
   import Telegram from './materials/Telegram.svelte';
   import Rewritten from './materials/Rewritten.svelte';
 
@@ -13,9 +14,11 @@
     total: number;
     /** ui.json herdPicked, e.g. «{n}% обрали це». */
     herdLabel: string;
+    /** Invented yellow-press pieces drawn behind the question. */
+    press?: PressItem[];
     onanswer: (a: Answer) => void;
   }
-  let { question, theme, index, total, herdLabel, onanswer }: Props = $props();
+  let { question, theme, index, total, herdLabel, press = [], onanswer }: Props = $props();
 
   type Step = 'pick' | 'confidence' | 'why' | 'explain';
   const CONF: { id: Confidence; label: string }[] = [
@@ -96,6 +99,7 @@
 </script>
 
 <main class="screen {theme}" data-testid="question-screen" bind:this={root}>
+  {#if press.length}<PressBackdrop items={press} variant={theme === 'feed-stop' ? 'noise' : 'margins'} />{/if}
   <div class="grid" data-testid="grid" class:single={!question.material}>
     {#if question.material}
       <div class="page left">
@@ -146,10 +150,10 @@
 </main>
 
 <style>
-  .screen { min-height: 100dvh; box-sizing: border-box; padding: 3rem 1rem 2rem; }
+  .screen { position: relative; overflow: hidden; min-height: 100dvh; box-sizing: border-box; padding: 3rem 1rem 2rem; }
   .feed-stop { background: #000; color: #fff; font-family: var(--font-feed); }
   .paper { background: var(--paper); color: var(--ink); font-family: var(--font-book); }
-  .grid { display: grid; grid-template-columns: 1fr; gap: 1.5rem; max-width: 64rem; margin: 0 auto; }
+  .grid { position: relative; z-index: 1; display: grid; grid-template-columns: 1fr; gap: 1.5rem; max-width: 64rem; margin: 0 auto; }
   .kicker { color: #ff3b30; font-weight: 800; font-size: 1.1rem; margin: 0 0 0.3rem; }
   .count { opacity: 0.6; font-size: 0.8rem; margin: 0 0 0.4rem; }
   h1 { font-size: 1.4rem; line-height: 1.3; margin: 0 0 1rem; }
@@ -158,6 +162,8 @@
   button { font: inherit; color: inherit; background: transparent; border: 2px solid color-mix(in srgb, currentColor 35%, transparent); border-radius: 10px; padding: 0.7rem 0.9rem; text-align: left; cursor: pointer; display: flex; gap: 0.7rem; align-items: baseline; width: 100%; box-sizing: border-box; }
   button:disabled { cursor: default; color: inherit; opacity: 0.7; }
   button.chosen { border-color: currentColor; opacity: 1; }
+  .feed-stop button { background: rgba(10, 10, 10, 0.82); }
+  .paper button { background: color-mix(in srgb, var(--paper) 92%, transparent); }
   .row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
   .row button { justify-content: center; }
   kbd { font: 0.75rem var(--font-feed); opacity: 0.55; }

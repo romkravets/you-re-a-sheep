@@ -45,7 +45,12 @@ export interface Level { id: LevelId; name: string; emoji: string; min: number; 
   description: string; slogan: string; challengeLine: string; exitPlan: ExitPlan; quote?: string }
 export interface Fact { id: string; text: string; source: Source; note?: string }
 export interface Pattern { skill: Skill; line: string }  // «Твій шаблон: {line}»
-export interface Content { ui: Record<string, string>; levels: Level[]; facts: Fact[]; patterns: Pattern[]; episodes: Episode[] }
+/** Invented yellow-press pieces for the question-screen backdrop; `*word*` marks the red accent. */
+export type PressItem =
+  | { kind: 'paper'; masthead: string; headline: string; body?: string }
+  | { kind: 'channel'; channel: string; text: string; views: string; time: string };
+export interface Content { ui: Record<string, string>; levels: Level[]; facts: Fact[]; patterns: Pattern[];
+  press: PressItem[]; episodes: Episode[] }
 
 // runtime
 export type FeedEvent = { kind: 'like' | 'share'; clipId: string } | { kind: 'dwell'; clipId: string; ms: number };
