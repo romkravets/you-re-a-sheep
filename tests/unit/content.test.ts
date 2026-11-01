@@ -152,8 +152,41 @@ describe('validateContent', () => {
     expect(validateContent(c)).toEqual([]);
     for (let seed = 1; seed <= 50; seed++) {
       const s = buildSession(c, seed, undefined, { pilot: true });
-      expect(s.rounds).toHaveLength(2);
+      expect(s.rounds).toHaveLength(3);
     }
+  });
+
+  it('pilot has a round-2 clip set with 6 clips, a fake, a real and an ad, and 2 bound questions', () => {
+    const c = loadContent();
+    const pilot = c.episodes.find((e) => e.id === 'pilot')!;
+    const r2 = pilot.clipSets.find((s) => s.round === 2)!;
+    expect(r2, 'round-2 clip set').toBeDefined();
+    expect(r2.id).toBe('pilot-r2');
+    expect(r2.rewrite).toBeUndefined();
+    expect(r2.clips).toHaveLength(6);
+    const trapOf = (id: string) => r2.clips.find((x) => x.id === id)?.trap;
+    expect(trapOf('r2-snowplow')).toBe('fake');
+    expect(trapOf('r2-honey')).toBe('real');
+    expect(trapOf('r2-coffee')).toBe('ad');
+    // the set doesn't open with a trap, and traps never sit next to each other
+    expect(r2.clips[0].trap).toBeUndefined();
+    for (let i = 1; i < r2.clips.length; i++) {
+      expect(Boolean(r2.clips[i].trap && r2.clips[i - 1].trap), `adjacent traps at ${i}`).toBe(false);
+    }
+    for (const clip of r2.clips) {
+      expect(clip.webm).toBe(`/clips/${clip.id}.webm`);
+      expect(clip.license.license).not.toBe('placeholder');
+    }
+    expect(r2.questionIds).toHaveLength(2);
+    for (const id of r2.questionIds) {
+      const x = pilot.questions.find((y) => y.id === id)!;
+      expect(x, id).toBeDefined();
+      expect(x.type).toBe('recall');
+      expect(x.why).toBeUndefined();
+    }
+    // the true-but-shouty story names a checkable source
+    const realQ = pilot.questions.find((y) => r2.questionIds.includes(y.id) && y.source)!;
+    expect(realQ.source!.url).toMatch(/^https:\/\//);
   });
 
   it('explanations read well after a right answer too (no «you failed» phrasing)', () => {

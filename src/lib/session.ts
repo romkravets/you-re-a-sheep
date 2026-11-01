@@ -69,7 +69,8 @@ export function buildSession(
       kind: 'reality',
       questions: [rewrite, pickOfType('herd'), pickOfType('farm')].map((q) => withShuffledOptions(q, rnd)),
     };
-    return { seed, rounds: [round1, reality] };
+    const hasRound2 = allSets.some((c) => c.round === 2);
+    return { seed, rounds: hasRound2 ? [round1, feedRound(2), reality] : [round1, reality] };
   }
 
   const round2 = feedRound(2);

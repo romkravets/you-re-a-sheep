@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="uk">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>crack harness</title>
+    <style>
+      #paper { position: fixed; inset: 0; padding: 3rem 1.5rem; background: var(--paper); color: var(--ink); font-family: var(--font-book); }
+      #paper h1 { font-size: 1.6rem; line-height: 1.3; }
+      #paper .kicker { font-variant: small-caps; letter-spacing: 0.08em; color: var(--ink-soft); }
+    </style>
+  </head>
+  <body>
+    <main id="paper" data-testid="paper" hidden>
+      <p class="kicker">Раунд 3 · Реальність</p>
+      <h1>Хто насправді написав цей текст?</h1>
+      <p>Тиша. Папір. Тепер можна подумати спокійно й без поспіху, як над книжкою.</p>
+    </main>
+    <div id="feed-root"></div>
+    <div id="crack-root"></div>
+    <script type="module" src="/tests/e2e/crack-harness.ts"></script>
+  </body>
+</html>

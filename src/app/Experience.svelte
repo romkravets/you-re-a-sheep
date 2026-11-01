@@ -4,7 +4,8 @@
   import { buildSession } from '../lib/session';
   import { scoreRun, sheepMeter } from '../lib/score';
   import { levelFor } from '../lib/levels';
-  import { prefersReducedMotion } from '../lib/motion';
+  import Crack, { type CrackVariant } from '../crack/Crack.svelte';
+  import { snapshotFeed, stopStandIn, type Frame } from '../crack/snapshot';
   import Feed from '../feed/Feed.svelte';
   import QuestionScreen from '../quiz/QuestionScreen.svelte';
   import SheepMeter from './SheepMeter.svelte';
@@ -14,8 +15,7 @@
   interface Props { content: Content }
   let { content }: Props = $props();
 
-  type Stage = 'feed1' | 'stop1' | 'reality' | 'reveal' | 'verdict';
-  const FADE_MS = 600;
+  type Stage = 'feed1' | 'stop1' | 'feed2' | 'stop2' | 'reality' | 'reveal' | 'verdict';
 
   function newSeed(first: boolean): number {
     if (first && import.meta.env.MODE === 'test') {
@@ -29,33 +29,81 @@
   let session: Session = $state(start(true));
   let stage = $state<Stage>('feed1');
   let answers: Answer[] = $state([]);
-  let feedEvents: FeedEvent[] = $state([]);
+  let feed1Events: FeedEvent[] = $state([]);
+  let feed2Events: FeedEvent[] = $state([]);
   let qIndex = $state(0);
-  let fading = $state(false);
-  let timers: ReturnType<typeof setTimeout>[] = [];
+  // The glass shatter over a stage change; the next stage is already rendered underneath.
+  let crack = $state<{ variant: CrackVariant; source: Frame | null; impact: { x: number; y: number } } | null>(null);
+  let lastFeedFrame: Frame | null = null;
 
-  const round = $derived(stage === 'stop1' ? session.rounds[0] : session.rounds[session.rounds.length - 1]);
-  const feedRound = $derived(session.rounds[0]);
+  const round = $derived(
+    stage === 'stop1' ? session.rounds[0] : stage === 'stop2' ? session.rounds[1] : session.rounds[session.rounds.length - 1],
+  );
+  const hasRound2 = $derived(session.rounds.length === 3);
+  const feedRound = $derived(stage === 'feed2' ? session.rounds[1] : session.rounds[0]);
+  const feedEvents = $derived([...feed1Events, ...feed2Events]);
   const questions = $derived(round.questions);
-  // Feed penalties reach the meter only after the feed ends, so it cannot flag a trap live.
-  const meter = $derived(sheepMeter(session, answers, stage === 'feed1' ? [] : feedEvents));
+  // A feed's penalties reach the meter only once its «Стоп» begins, so it cannot flag a trap live.
+  const meterEvents = $derived(stage === 'feed1' ? [] : stage === 'stop1' || stage === 'feed2' ? feed1Events : feedEvents);
+  const meter = $derived(sheepMeter(session, answers, meterEvents));
   const result = $derived(stage === 'reveal' || stage === 'verdict' ? scoreRun(session, answers, feedEvents, content) : undefined);
   const level = $derived(result ? levelFor(result.percent, content.levels) : undefined);
   const theme = $derived(stage === 'reality' ? 'paper' : 'feed-stop');
 
-  // Back is held only mid-test; after it (reveal, verdict) Back leaves the app normally.
-  const TRAPPED: Stage[] = ['feed1', 'stop1', 'reality'];
-  let pushed = 0; // history entries this run added on top of the entry the app loaded in
+  // Back is held only mid-test by TWO guard entries on top of the page's own entry, so even two
+  // quick presses (the second landing before popstate re-arms) stay on the page. Each entry knows
+  // its height `n`; popstate tops the stack back up to GUARD_DEPTH from wherever Back landed.
+  // Leaving the test walks back to the page's own entry, so Back then behaves like on any other page.
+  const TRAPPED: Stage[] = ['feed1', 'stop1', 'feed2', 'stop2', 'reality'];
+  const GUARD_DEPTH = 2;
+  let guarded = false;
+
+  /** How many guard entries sit below and at the current one (0 = the page's own entry). */
+  function height(): number {
+    const st = history.state as { guard?: boolean; n?: number } | null;
+    return st?.guard ? (st.n ?? 1) : 0; // entries without n: the older single-guard format
+  }
+  function topUp() {
+    for (let n = height() + 1; n <= GUARD_DEPTH; n++) history.pushState({ guard: true, n }, '');
+  }
+  function guard() {
+    guarded = true;
+    topUp();
+  }
+  function unguard() {
+    if (!guarded) return;
+    guarded = false;
+    const h = height();
+    if (h > 0) history.go(-h);
+  }
 
   function go(next: Stage) {
     stage = next;
     qIndex = 0;
-    history.pushState({ stage: next }, '');
-    pushed += 1;
+    if (TRAPPED.includes(next)) guard();
+    else unguard();
   }
 
   function onfeedDone() {
-    if (feedRound.kind === 'feed') go('stop1');
+    if (feedRound.kind !== 'feed') return;
+    // Snapshot the last clip now: the feed unmounts as soon as the stage changes.
+    lastFeedFrame = safe(() => snapshotFeed(document.querySelector<HTMLElement>('[data-testid="feed"]')));
+    shatter('stop', lastFeedFrame);
+    go(stage === 'feed1' ? 'stop1' : 'stop2');
+  }
+
+  function safe(draw: () => Frame | null): Frame | null {
+    try {
+      return draw();
+    } catch {
+      return null;
+    }
+  }
+
+  /** Impact near the middle of the screen, a little off-centre each time. */
+  function shatter(variant: CrackVariant, source: Frame | null) {
+    const jitter = () => (Math.random() - 0.5) * 0.12;
+    crack = { variant, source, impact: { x: innerWidth * (0.5 + jitter()), y: innerHeight * (0.46 + jitter()) } };
   }
 
   function onanswer(a: Answer) {
@@ -64,51 +112,53 @@
       qIndex += 1;
       return;
     }
-    if (stage === 'stop1') crossfadeToReality();
+    if (stage === 'stop1' && hasRound2) {
+      // Plain cut back into the feed: no shatter until the last «Стоп».
+      go('feed2');
+      return;
+    }
+    if (stage === 'stop1' || stage === 'stop2') {
+      // «Стоп» is DOM text: break a stand-in of it, with the paper already rendered underneath.
+      shatter('feed-to-paper', safe(() => stopStandIn(lastFeedFrame, document.querySelector<HTMLElement>('[data-testid="question-screen"]'))));
+      go('reality');
+    }
     else go('reveal');
   }
 
-  function crossfadeToReality() {
-    if (prefersReducedMotion()) return go('reality');
-    fading = true;
-    timers.push(setTimeout(() => go('reality'), FADE_MS / 2));
-    timers.push(setTimeout(() => (fading = false), FADE_MS));
-  }
-
   function retry() {
-    timers.forEach(clearTimeout);
+    crack = null;
+    lastFeedFrame = null;
     session = start(false);
     answers = [];
-    feedEvents = [];
-    fading = false;
+    feed1Events = [];
+    feed2Events = [];
     go('feed1');
   }
 
   onMount(() => {
-    history.replaceState({ stage }, '');
+    // After a reload mid-test we may already sit on a guard entry: guard() only tops it up.
+    guard();
+    // Read where Back actually landed (history.state), not the event, so several queued pops
+    // re-arm correctly; when no longer guarded (unguard's own go(-h)) this does nothing.
     const onpop = () => {
-      if (TRAPPED.includes(stage)) {
-        history.pushState({ stage }, '');
-        return;
-      }
-      // Skip our own same-page entries in one step, so a single Back leaves the app
-      // (a no-op when the app was the first page in this tab).
-      pushed = Math.max(0, pushed - 1);
-      history.go(-(pushed + 1));
+      if (guarded && TRAPPED.includes(stage)) topUp();
     };
     window.addEventListener('popstate', onpop);
     return () => {
       window.removeEventListener('popstate', onpop);
-      timers.forEach(clearTimeout);
     };
   });
 </script>
 
-{#if stage === 'feed1' && feedRound.kind === 'feed'}
-  {#key session.seed}
-    <Feed clipSet={feedRound.clipSet} onevent={(e) => (feedEvents = [...feedEvents, e])} ondone={onfeedDone} />
+{#if (stage === 'feed1' || stage === 'feed2') && feedRound.kind === 'feed'}
+  {#key `${session.seed}-${stage}`}
+    <Feed
+      clipSet={feedRound.clipSet}
+      onevent={(e) => (stage === 'feed1' ? (feed1Events = [...feed1Events, e]) : (feed2Events = [...feed2Events, e]))}
+      ondone={onfeedDone}
+    />
   {/key}
-{:else if stage === 'stop1' || stage === 'reality'}
+{:else if stage === 'stop1' || stage === 'stop2' || stage === 'reality'}
   <QuestionScreen question={questions[qIndex]} {theme} index={qIndex} total={questions.length} herdLabel={content.ui.herdPicked} press={content.press} {onanswer} />
 {:else if stage === 'reveal'}
   <Reveal ui={content.ui} oncontinue={() => go('verdict')} />
@@ -120,9 +170,9 @@
   <SheepMeter value={meter} theme={stage === 'reality' ? 'paper' : 'feed-stop'} />
 {/if}
 
-{#if fading}<div class="fade" aria-hidden="true"></div>{/if}
-
-<style>
-  .fade { position: fixed; inset: 0; z-index: 50; background: #000; pointer-events: none; animation: fade 600ms ease-in-out both; }
-  @keyframes fade { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
-</style>
+{#if crack}
+  {#key crack}
+    {@const current = crack}
+    <Crack source={current.source} impact={current.impact} variant={current.variant} ondone={() => { if (crack === current) crack = null; }} />
+  {/key}
+{/if}

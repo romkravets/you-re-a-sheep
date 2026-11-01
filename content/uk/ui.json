@@ -27,5 +27,10 @@
   "soundOff": "Вимкнути звук",
   "like": "Подобається",
   "comment": "Коментарі",
-  "share": "Поділитись"
+  "share": "Поділитись",
+  "challenge": "Кинути виклик",
+  "challengeBusy": "Малюю картку…",
+  "challengeSaved": "Картку збережено. Виклади її в сторіз.",
+  "challengeFailed": "Не вийшло намалювати картку. Спробуй ще раз.",
+  "siteLabel": "you-re-a-sheep.vercel.app"
 }

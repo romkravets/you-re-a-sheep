@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Level, Pattern, RunResult } from '../lib/types';
+  import ShareActions from './ShareActions.svelte';
 
   interface Props { result: RunResult; level: Level; patterns: Pattern[]; ui: Record<string, string>; onretry: () => void }
   let { result, level, patterns, ui, onretry }: Props = $props();
@@ -22,7 +23,8 @@
       {#each result.verdictLines as line (line)}<li>{line}</li>{/each}
     </ul>
     <p class="disclaimer">{ui.disclaimer}</p>
-    <button type="button" onclick={onretry}>{ui.retry}</button>
+    <ShareActions {level} percent={result.percent} {ui} />
+    <button type="button" class="retry" onclick={onretry}>{ui.retry}</button>
   </div>
 </main>
 
@@ -39,7 +41,7 @@
   .pattern strong { font-weight: 700; }
   .lines { list-style: disc; padding-left: 1.2rem; margin: 0; display: grid; gap: 0.4rem; line-height: 1.5; }
   .disclaimer { opacity: 0.7; font-style: italic; margin: 0.6rem 0 0; }
-  button { justify-self: start; font: inherit; background: var(--poster-red); color: #fff; border: 0; border-radius: 10px; padding: 0.8rem 1.4rem; cursor: pointer; }
+  .retry { justify-self: start; font: inherit; background: var(--poster-red); color: #fff; border: 0; border-radius: 10px; padding: 0.8rem 1.4rem; cursor: pointer; }
   @media (min-width: 900px) {
     .verdict { flex-direction: row; justify-content: center; align-items: center; gap: 4rem; padding: 3rem; }
     .character { font-size: 14rem; }

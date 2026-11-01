@@ -116,6 +116,91 @@
           "license": { "source": "MartinThoma, Wikimedia Commons", "url": "https://commons.wikimedia.org/wiki/File:Sealife-Munich-Octopus.ogv", "license": "CC0" }
         }
       ]
+    },
+    {
+      "id": "pilot-r2",
+      "round": 2,
+      "questionIds": ["pilot-r2-snow", "pilot-r2-bees"],
+      "clips": [
+        {
+          "id": "r2-forest",
+          "webm": "/clips/r2-forest.webm",
+          "mp4": "/clips/r2-forest.mp4",
+          "poster": "/clips/r2-forest.jpg",
+          "handle": "snih.i.chai",
+          "caption": "ну нарешті справжня зима ❄️ хто теж сьогодні нікуди не йде? #зима #сніг #атмосфера",
+          "likes": "14.3K",
+          "comments": "286",
+          "shares": "1.2K",
+          "license": { "source": "Peter Cooper Jr., Wikimedia Commons", "url": "https://commons.wikimedia.org/wiki/File:Snow_falling_in_Charlton_MA_2025-12-14.webm", "license": "CC0" }
+        },
+        {
+          "id": "r2-snowplow",
+          "webm": "/clips/r2-snowplow.webm",
+          "mp4": "/clips/r2-snowplow.mp4",
+          "poster": "/clips/r2-snowplow.jpg",
+          "handle": "misto.sohodni",
+          "caption": "Інформацію уточнюємо. Слідкуйте за оновленнями. #новини #місто #снігопад",
+          "likes": "9.8K",
+          "comments": "1.4K",
+          "shares": "6.2K",
+          "overlay": "Через снігопад з понеділка всі школи міста переходять на дистанційне навчання до кінця тижня. Про це повідомили в міській раді.",
+          "trap": "fake",
+          "license": { "source": "Роман Рябенко, Wikimedia Commons", "url": "https://commons.wikimedia.org/wiki/File:Плужний_снігоочисник_на_вулиці.webm", "license": "CC0" }
+        },
+        {
+          "id": "r2-birds",
+          "webm": "/clips/r2-birds.webm",
+          "mp4": "/clips/r2-birds.mp4",
+          "poster": "/clips/r2-birds.jpg",
+          "handle": "ptashyni.budni",
+          "caption": "у годівниці сьогодні аншлаг 🐦❤️ червоний тут головний, дятел просто зайшов поїсти #птахи #годівниця #зима",
+          "likes": "22.6K",
+          "comments": "418",
+          "shares": "1.9K",
+          "license": { "source": "U.S. Fish and Wildlife Service – Midwest Region, Wikimedia Commons", "url": "https://commons.wikimedia.org/wiki/File:Busy_Bird_Feeder_(31524812531).webm", "license": "PD" }
+        },
+        {
+          "id": "r2-honey",
+          "webm": "/clips/r2-honey.webm",
+          "mp4": "/clips/r2-honey.mp4",
+          "poster": "/clips/r2-honey.jpg",
+          "handle": "mozok.vybukh",
+          "caption": "думав, це байка, а воно реально так 😳🐝 #факти #бджоли #рекомендації",
+          "likes": "156K",
+          "comments": "4.7K",
+          "shares": "17.3K",
+          "overlay": "ТИ НЕ ПОВІРИШ 😱 Бджоли ТАНЦЮЮТЬ, щоб показати іншим, де їжа 🐝💃 А вчений, який розгадав цей танець, отримав НОБЕЛІВКУ‼️",
+          "trap": "real",
+          "license": { "source": "Virgo Siil, Wikimedia Commons", "url": "https://commons.wikimedia.org/wiki/File:Kodune_mee_võtmine_Kõrvemaal_2014._aastal._Harvesting_honey_in_Estonia_2014.webm", "license": "CC0" }
+        },
+        {
+          "id": "r2-woodpecker",
+          "webm": "/clips/r2-woodpecker.webm",
+          "mp4": "/clips/r2-woodpecker.mp4",
+          "poster": "/clips/r2-woodpecker.jpg",
+          "handle": "za.viknom.lis",
+          "caption": "прилітає по сало щоранку, як до себе додому 😂 #дятел #птахи #зима",
+          "likes": "31.4K",
+          "comments": "702",
+          "shares": "2.5K",
+          "license": { "source": "5shot, Wikimedia Commons", "url": "https://commons.wikimedia.org/wiki/File:Pileated_Woodpecker_eating_suet.ogv", "license": "CC0" }
+        },
+        {
+          "id": "r2-coffee",
+          "webm": "/clips/r2-coffee.webm",
+          "mp4": "/clips/r2-coffee.mp4",
+          "poster": "/clips/r2-coffee.jpg",
+          "handle": "sonia.zranku",
+          "caption": "не реклама, просто ділюсь 💛 промокод у профілі, якщо що 🤫 #кава #мійранок #рекомендації",
+          "likes": "41.8K",
+          "comments": "937",
+          "shares": "3.6K",
+          "overlay": "Кава зі справжніх ягід, а не порошок з пачки ☕🍒 Без неї я б не пережила жодної контрольної. Раджу, як подрузі 💛",
+          "trap": "ad",
+          "license": { "source": "AlexanderKlink, Wikimedia Commons", "url": "https://commons.wikimedia.org/wiki/File:Color_sorter_coffeebeans.webm", "license": "CC0" }
+        }
+      ]
     }
   ],
   "questions": [
@@ -209,7 +294,7 @@
         ],
         "correct": "a"
       },
-      "explanation": "Жуйка — 5, батон — 105, разом 110. «10 грн» — перша цифра, що спадає на думку майже всім, а «87%» штовхають туди, куди мозок і так біжить найлегшим шляхом.",
+      "explanation": "Жуйка — 5, батон — 105, разом 110. Перевір «10»: тоді батон 110, а разом 120, не сходиться. «10 грн» — перша цифра, що спадає на думку майже всім, а «87%» штовхають туди, куди мозок і так біжить найлегшим шляхом.",
       "verdictLine": "Ти пішов за натовпом — а натовп був вигаданий."
     },
     {
@@ -233,6 +318,35 @@
       },
       "explanation": "Ти тут не клієнт, а товар: рекламодавці купують твій час і увагу. Кінець стрічки — це місце, де ти пішов би, тому його й немає.",
       "verdictLine": "Ти не питаєш, хто заробляє на тому, що ти гортаєш стрічку."
+    },
+    {
+      "id": "pilot-r2-snow",
+      "type": "recall",
+      "prompt": "Новина про дистанційку через снігопад. Чи можна її перевірити?",
+      "options": [
+        { "id": "a", "text": "Ні: ні дати, ні посилання, тільки «повідомили в міській раді»" },
+        { "id": "b", "text": "Ні, але вона написана надто спокійно для правди" },
+        { "id": "c", "text": "Так: сніг справді йде, отже й дистанційка правда" }
+      ],
+      "correct": "a",
+      "skill": "source",
+      "explanation": "«Повідомили в міській раді» — без дати, без посилання, без жодного способу перевірити, а сніг у кадрі нічого не доводить. Спокійний тон не робить новину правдою, так само як капслок не робить її брехнею.",
+      "verdictLine": "Ти повірив новині, бо вона говорила спокійним голосом."
+    },
+    {
+      "id": "pilot-r2-bees",
+      "type": "recall",
+      "prompt": "Пост «ТИ НЕ ПОВІРИШ» про бджіл, які танцюють. Це правда?",
+      "options": [
+        { "id": "a", "text": "Так, і це легко перевірити" },
+        { "id": "b", "text": "Ні, це клікбейт: капслок і «ти не повіриш»" },
+        { "id": "c", "text": "Наполовину: бджоли танцюють, а Нобелівку вигадали" }
+      ],
+      "correct": "a",
+      "skill": "source",
+      "source": { "label": "Нобелівська премія з фізіології або медицини 1973 року: Карл фон Фріш", "url": "https://www.nobelprize.org/prizes/medicine/1973/frisch/facts/" },
+      "explanation": "Правда: Карл фон Фріш розгадав танець бджіл і 1973 року (разом з двома колегами) отримав Нобелівську премію, це є на nobelprize.org. Капслок і «ти не повіриш» нічого не кажуть про правдивість — її вирішує перевірка.",
+      "verdictLine": "Ти засумнівався в правді, бо вона кричала."
     }
   ]
 }
