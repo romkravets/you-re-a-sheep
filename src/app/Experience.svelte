@@ -43,15 +43,29 @@
   const level = $derived(result ? levelFor(result.percent, content.levels) : undefined);
   const theme = $derived(stage === 'reality' ? 'paper' : 'feed-stop');
 
-  // Back is held only mid-test; after it (reveal, verdict) Back leaves the app normally.
+  // Back is held only mid-test by a single guard entry on top of the page's own entry.
+  // Leaving the test removes the guard, so Back then behaves like on any other page.
   const TRAPPED: Stage[] = ['feed1', 'stop1', 'reality'];
-  let pushed = 0; // history entries this run added on top of the entry the app loaded in
+  let guarded = false;
+  let ignoreNextPop = false;
+
+  function guard() {
+    if (guarded) return;
+    history.pushState({ guard: true }, '');
+    guarded = true;
+  }
+  function unguard() {
+    if (!guarded) return;
+    guarded = false;
+    ignoreNextPop = true;
+    history.back();
+  }
 
   function go(next: Stage) {
     stage = next;
     qIndex = 0;
-    history.pushState({ stage: next }, '');
-    pushed += 1;
+    if (TRAPPED.includes(next)) guard();
+    else unguard();
   }
 
   function onfeedDone() {
@@ -85,16 +99,12 @@
   }
 
   onMount(() => {
-    history.replaceState({ stage }, '');
+    // After a reload mid-test we may already sit on our guard entry.
+    if ((history.state as { guard?: boolean } | null)?.guard) guarded = true;
+    else guard();
     const onpop = () => {
-      if (TRAPPED.includes(stage)) {
-        history.pushState({ stage }, '');
-        return;
-      }
-      // Skip our own same-page entries in one step, so a single Back leaves the app
-      // (a no-op when the app was the first page in this tab).
-      pushed = Math.max(0, pushed - 1);
-      history.go(-(pushed + 1));
+      if (ignoreNextPop) { ignoreNextPop = false; return; }
+      if (guarded && TRAPPED.includes(stage)) history.pushState({ guard: true }, '');
     };
     window.addEventListener('popstate', onpop);
     return () => {

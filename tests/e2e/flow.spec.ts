@@ -75,6 +75,21 @@ test('back button after the test behaves normally (leaves the app)', async ({ pa
   await expect.poll(() => page.url()).toBe('about:blank');
 });
 
+test('after the test the Back guard is gone even when the app is the first page in the tab', async ({ page }) => {
+  await toVerdict(page);
+  await expect(page.getByTestId('level-name')).toBeVisible();
+  // No leftover same-page entries: with nothing before the app, Back has nowhere to go (button disabled),
+  // instead of silently eating several presses.
+  await expect.poll(() => page.evaluate(() => (window as unknown as { navigation: { canGoBack: boolean } }).navigation.canGoBack)).toBe(false);
+});
+
+test('back pressed twice mid-test still stays', async ({ page }) => {
+  await toStop1(page);
+  await page.goBack();
+  await page.goBack();
+  await expect(page.getByTestId('question-screen')).toBeVisible();
+});
+
 test('feed traps do not move the meter during the feed and reach the verdict', async ({ page }) => {
   await page.clock.install();
   await page.goto('/?seed=123');
