@@ -13,6 +13,7 @@ export default defineConfig(({ mode }) => ({
         // Dev-only feed harness for e2e; never part of the production build.
         ...(mode === 'test' ? { 'feed-harness': resolve(import.meta.dirname, 'tests/e2e/feed-harness.html') } : {}),
         ...(mode === 'test' ? { 'verdict-harness': resolve(import.meta.dirname, 'tests/e2e/verdict-harness.html') } : {}),
+        ...(mode === 'test' ? { 'crack-harness': resolve(import.meta.dirname, 'tests/e2e/crack-harness.html') } : {}),
         ...(mode === 'test' ? { 'quiz-harness': resolve(import.meta.dirname, 'tests/e2e/quiz-harness.html') } : {}),
       },
     },

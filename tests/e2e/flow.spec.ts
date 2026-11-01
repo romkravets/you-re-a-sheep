@@ -86,6 +86,8 @@ test('after the test the Back guard is gone even when the app is the first page 
 test('back pressed twice mid-test still stays', async ({ page }) => {
   await toStop1(page);
   await page.goBack();
+  // Human pace: the second press comes after the page re-armed its guard (popstate is async).
+  await expect.poll(() => page.evaluate(() => (history.state as { guard?: boolean } | null)?.guard)).toBe(true);
   await page.goBack();
   await expect(page.getByTestId('question-screen')).toBeVisible();
 });
@@ -119,4 +121,13 @@ test('retry starts a new run from the feed', async ({ page }) => {
   await page.getByRole('button', { name: 'Пройти ще раз' }).click();
   await expect(page.getByTestId('feed')).toBeVisible();
   await expect(page.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0');
+});
+
+test('the «Стоп» screen shatters onto paper that is already there', async ({ page }) => {
+  await toStop1(page);
+  for (let i = 0; i < 3; i++) await answerOne(page);
+  await expect(page.getByTestId('crack-canvas')).toBeAttached();
+  await expect(page.getByTestId('question-screen')).toHaveClass(/paper/);
+  await page.clock.runFor(1500);
+  await expect(page.getByTestId('crack-canvas')).toHaveCount(0);
 });

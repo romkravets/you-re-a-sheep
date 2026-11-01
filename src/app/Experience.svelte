@@ -4,7 +4,8 @@
   import { buildSession } from '../lib/session';
   import { scoreRun, sheepMeter } from '../lib/score';
   import { levelFor } from '../lib/levels';
-  import { prefersReducedMotion } from '../lib/motion';
+  import Crack, { type CrackVariant } from '../crack/Crack.svelte';
+  import { snapshotFeed, stopStandIn, type Frame } from '../crack/snapshot';
   import Feed from '../feed/Feed.svelte';
   import QuestionScreen from '../quiz/QuestionScreen.svelte';
   import SheepMeter from './SheepMeter.svelte';
@@ -15,7 +16,6 @@
   let { content }: Props = $props();
 
   type Stage = 'feed1' | 'stop1' | 'reality' | 'reveal' | 'verdict';
-  const FADE_MS = 600;
 
   function newSeed(first: boolean): number {
     if (first && import.meta.env.MODE === 'test') {
@@ -31,8 +31,9 @@
   let answers: Answer[] = $state([]);
   let feedEvents: FeedEvent[] = $state([]);
   let qIndex = $state(0);
-  let fading = $state(false);
-  let timers: ReturnType<typeof setTimeout>[] = [];
+  // The glass shatter over a stage change; the next stage is already rendered underneath.
+  let crack = $state<{ variant: CrackVariant; source: Frame | null; impact: { x: number; y: number } } | null>(null);
+  let lastFeedFrame: Frame | null = null;
 
   const round = $derived(stage === 'stop1' ? session.rounds[0] : session.rounds[session.rounds.length - 1]);
   const feedRound = $derived(session.rounds[0]);
@@ -69,7 +70,25 @@
   }
 
   function onfeedDone() {
-    if (feedRound.kind === 'feed') go('stop1');
+    if (feedRound.kind !== 'feed') return;
+    // Snapshot the last clip now: the feed unmounts as soon as the stage changes.
+    lastFeedFrame = safe(() => snapshotFeed(document.querySelector<HTMLElement>('[data-testid="feed"]')));
+    shatter('stop', lastFeedFrame);
+    go('stop1');
+  }
+
+  function safe(draw: () => Frame | null): Frame | null {
+    try {
+      return draw();
+    } catch {
+      return null;
+    }
+  }
+
+  /** Impact near the middle of the screen, a little off-centre each time. */
+  function shatter(variant: CrackVariant, source: Frame | null) {
+    const jitter = () => (Math.random() - 0.5) * 0.12;
+    crack = { variant, source, impact: { x: innerWidth * (0.5 + jitter()), y: innerHeight * (0.46 + jitter()) } };
   }
 
   function onanswer(a: Answer) {
@@ -78,23 +97,20 @@
       qIndex += 1;
       return;
     }
-    if (stage === 'stop1') crossfadeToReality();
+    if (stage === 'stop1') {
+      // «Стоп» is DOM text: break a stand-in of it, with the paper already rendered underneath.
+      shatter('feed-to-paper', safe(() => stopStandIn(lastFeedFrame, document.querySelector<HTMLElement>('[data-testid="question-screen"]'))));
+      go('reality');
+    }
     else go('reveal');
   }
 
-  function crossfadeToReality() {
-    if (prefersReducedMotion()) return go('reality');
-    fading = true;
-    timers.push(setTimeout(() => go('reality'), FADE_MS / 2));
-    timers.push(setTimeout(() => (fading = false), FADE_MS));
-  }
-
   function retry() {
-    timers.forEach(clearTimeout);
+    crack = null;
+    lastFeedFrame = null;
     session = start(false);
     answers = [];
     feedEvents = [];
-    fading = false;
     go('feed1');
   }
 
@@ -109,7 +125,6 @@
     window.addEventListener('popstate', onpop);
     return () => {
       window.removeEventListener('popstate', onpop);
-      timers.forEach(clearTimeout);
     };
   });
 </script>
@@ -130,9 +145,9 @@
   <SheepMeter value={meter} theme={stage === 'reality' ? 'paper' : 'feed-stop'} />
 {/if}
 
-{#if fading}<div class="fade" aria-hidden="true"></div>{/if}
-
-<style>
-  .fade { position: fixed; inset: 0; z-index: 50; background: #000; pointer-events: none; animation: fade 600ms ease-in-out both; }
-  @keyframes fade { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
-</style>
+{#if crack}
+  {#key crack}
+    {@const current = crack}
+    <Crack source={current.source} impact={current.impact} variant={current.variant} ondone={() => { if (crack === current) crack = null; }} />
+  {/key}
+{/if}
