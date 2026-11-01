@@ -1,8 +1,13 @@
-@import '@fontsource/literata/cyrillic-400.css';
-@import '@fontsource/literata/cyrillic-700.css';
-@import '@fontsource/literata/cyrillic-400-italic.css';
-@import '@fontsource/unbounded/cyrillic-400.css';
-@import '@fontsource/unbounded/cyrillic-900.css';
+/*
+ * Whole-weight files, not the cyrillic-* / latin-* subset files: those carry no unicode-range, so the
+ * last one imported would shadow the other. Here each subset (Cyrillic for the words, Latin for digits,
+ * «%», «—» and punctuation) has its range and downloads only when a page uses it.
+ */
+@import '@fontsource/literata/400.css';
+@import '@fontsource/literata/700.css';
+@import '@fontsource/literata/400-italic.css';
+@import '@fontsource/unbounded/400.css';
+@import '@fontsource/unbounded/900.css';
 
 :root {
   /* neon feed */

@@ -40,6 +40,21 @@ test('passive user reaches done in <= 8x4.5s + 2s', async ({ page }) => {
   await expect.poll(() => page.evaluate(() => (window as any).__done)).toBe(true);
 });
 
+test('dwell marks auto-advance as auto and a manual leave as not', async ({ page }) => {
+  await page.clock.install();
+  await page.goto(H);
+  await expect(page.getByTestId('clip-ph-1')).toBeVisible();
+  await page.clock.runFor(4500 + 200); // ph-1 → ph-2 by the timer
+  await expect.poll(() => page.evaluate(() => (window as any).__feed.index())).toBe(1);
+  await page.getByTestId('feed').focus();
+  await page.keyboard.press('ArrowDown'); // ph-2 → ph-3 by hand
+  await expect.poll(() => page.evaluate(() => (window as any).__feed.index())).toBe(2);
+  const dwells = (await page.evaluate(() => (window as any).__events)).filter((e: { kind: string }) => e.kind === 'dwell');
+  expect(dwells[0]).toMatchObject({ clipId: 'ph-1', auto: true });
+  expect(dwells[1]).toMatchObject({ clipId: 'ph-2' });
+  expect(dwells[1].auto).toBeFalsy();
+});
+
 test('video failure falls back to poster', async ({ page }) => {
   await page.route('**/*.webm', (r) => r.abort());
   await page.route('**/*.mp4', (r) => r.abort());

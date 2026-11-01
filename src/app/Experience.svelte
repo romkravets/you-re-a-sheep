@@ -5,7 +5,7 @@
   import { scoreRun, sheepMeter } from '../lib/score';
   import { levelFor } from '../lib/levels';
   import Crack, { type CrackVariant } from '../crack/Crack.svelte';
-  import { snapshotFeed, stopStandIn, type Frame } from '../crack/snapshot';
+  import { releaseFrame, snapshotFeed, stopStandIn, type Frame } from '../crack/snapshot';
   import Feed from '../feed/Feed.svelte';
   import QuestionScreen from '../quiz/QuestionScreen.svelte';
   import SheepMeter from './SheepMeter.svelte';
@@ -119,7 +119,10 @@
     }
     if (stage === 'stop1' || stage === 'stop2') {
       // «Стоп» is DOM text: break a stand-in of it, with the paper already rendered underneath.
-      shatter('feed-to-paper', safe(() => stopStandIn(lastFeedFrame, document.querySelector<HTMLElement>('[data-testid="question-screen"]'))));
+      const standIn = safe(() => stopStandIn(lastFeedFrame, document.querySelector<HTMLElement>('[data-testid="question-screen"]')));
+      shatter('feed-to-paper', standIn);
+      // The stand-in has copied what it needs; the feed snapshot isn't drawn again.
+      lastFeedFrame = releaseFrame(lastFeedFrame, standIn);
       go('reality');
     }
     else go('reveal');

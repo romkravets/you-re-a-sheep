@@ -81,6 +81,28 @@ describe('scoreRun', () => {
     const r2 = scoreRun(sess(Q), ans(Q), [{ kind: 'dwell', clipId: 'ad', ms: 2999 }, { kind: 'dwell', clipId: 'fk', ms: 9000 }], content);
     expect(r2.verdictLines).toEqual([]);
   });
+  it('auto-advanced dwell never blames a passive user', () => {
+    const Q = qs(10);
+    const auto: FeedEvent[] = [{ kind: 'dwell', clipId: 'cb', ms: 4500, auto: true }, { kind: 'dwell', clipId: 'ad', ms: 4500, auto: true }];
+    expect(scoreRun(sess(Q), ans(Q), auto, content).verdictLines).toEqual([]);
+    const manual: FeedEvent[] = [{ kind: 'dwell', clipId: 'cb', ms: 3200, auto: false }];
+    expect(scoreRun(sess(Q), ans(Q), manual, content).verdictLines).toEqual(['Ти завис на клікбейті.']);
+  });
+  it('liking or sharing an ad adds an ad line', () => {
+    const Q = qs(10);
+    expect(scoreRun(sess(Q), ans(Q), [{ kind: 'like', clipId: 'ad' }], content).verdictLines)
+      .toEqual(['Ти лайкнув рекламу, що прикидалась порадою.']);
+    const both: FeedEvent[] = [{ kind: 'like', clipId: 'ad' }, { kind: 'share', clipId: 'ad' }];
+    expect(scoreRun(sess(Q), ans(Q), both, content).verdictLines).toEqual(['Ти поширив рекламу, що прикидалась порадою.']);
+  });
+  it('ad line sits with the other feed lines, after wrong answers, under the cap', () => {
+    const Q = qs(10);
+    const ev: FeedEvent[] = [{ kind: 'share', clipId: 'fk' }, { kind: 'like', clipId: 'ad' }];
+    const r = scoreRun(sess(Q), ans(Q, [0]), ev, content);
+    expect(r.verdictLines).toEqual(['Ти переслав фейк.', 'Лінія q0.', 'Ти лайкнув рекламу, що прикидалась порадою.']);
+    const capped = scoreRun(sess(Q), ans(Q, [0, 1, 2]), ev, content);
+    expect(capped.verdictLines).toEqual(['Ти переслав фейк.', 'Лінія q0.', 'Лінія q1.', 'Лінія q2.']);
+  });
   it('verdict lines capped at 4 and ordered as specified', () => {
     const Q = qs(10, 'detail');
     const a = ans(Q, [0, 1], 'sure'); a[2].moreTime = true;

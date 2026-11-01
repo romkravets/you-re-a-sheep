@@ -27,23 +27,24 @@
 
   const glow = $derived(glows[clips[index]?.id] ?? '#6b2bff');
 
-  function leave() {
+  /** `auto`: the timer moved the feed on, not the user. */
+  function leave(auto: boolean) {
     const clip = clips[index];
-    if (clip) onevent({ kind: 'dwell', clipId: clip.id, ms: Math.round(performance.now() - enteredAt) });
+    if (clip) onevent({ kind: 'dwell', clipId: clip.id, ms: Math.round(performance.now() - enteredAt), auto });
   }
 
-  function finish() {
+  function finish(auto = false) {
     if (finished) return;
     finished = true;
     clearTimeout(timer);
-    leave();
+    leave(auto);
     ondone();
   }
 
-  function go(to: number) {
+  function go(to: number, auto = false) {
     if (finished || to < 0 || to === index) return;
-    if (to >= clips.length) return finish();
-    leave();
+    if (to >= clips.length) return finish(auto);
+    leave(auto);
     index = to;
     enteredAt = performance.now();
     arm();
@@ -51,7 +52,7 @@
 
   function arm() {
     clearTimeout(timer);
-    timer = setTimeout(() => go(index + 1), AUTO_ADVANCE_MS);
+    timer = setTimeout(() => go(index + 1, true), AUTO_ADVANCE_MS);
   }
 
   function next() {

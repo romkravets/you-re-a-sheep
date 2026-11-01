@@ -30,7 +30,7 @@
   "share": "Поділитись",
   "challenge": "Кинути виклик",
   "challengeBusy": "Малюю картку…",
-  "challengeSaved": "Картку збережено. Виклади її в сторіз.",
+  "challengeSaved": "Картку збережено. Якщо не бачиш її — відкрий тест у звичайному браузері.",
   "challengeFailed": "Не вийшло намалювати картку. Спробуй ще раз.",
-  "siteLabel": "you-re-a-sheep.vercel.app"
+  "siteLabel": ""
 }

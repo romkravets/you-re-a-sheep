@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import levelsJson from '../../content/uk/levels.json';
-import { cardText, shareOrDownload } from '../../src/lib/storycard';
+import { cardText, shareOrDownload, drawStoryCard, cardEmoji, glyphMissing } from '../../src/lib/storycard';
 import type { Level } from '../../src/lib/types';
 
 const levels = levelsJson as unknown as Level[];
@@ -86,5 +86,59 @@ describe('shareOrDownload', () => {
     nav.canShare = vi.fn(() => true);
     await expect(shareOrDownload(blob, 'card.png')).resolves.toBe('shared');
     expect(clicks).toHaveLength(0);
+  });
+});
+
+
+/** A 2D context stub that records fillText and answers measurements. */
+function fakeCtx(measure: (t: string) => number = (t) => t.length * 20, pixels: (t: string) => number[] = () => [0, 0, 0, 0]) {
+  const texts: string[] = [];
+  let last = '';
+  const target: Record<string, unknown> = {
+    fillText: (t: string) => { texts.push(t); last = t; },
+    measureText: (t: string) => ({ width: measure(t) }),
+    createLinearGradient: () => ({ addColorStop() {} }),
+    getImageData: () => ({ data: Uint8ClampedArray.from(pixels(last)) }),
+  };
+  const ctx = new Proxy(target, {
+    get: (o, k) => (k in o ? o[k as string] : () => undefined),
+    set: (o, k, v) => { o[k as string] = v; return true; },
+  });
+  return { ctx: ctx as unknown as CanvasRenderingContext2D, texts };
+}
+
+describe('drawStoryCard', () => {
+  const img = { width: 10, height: 10 } as unknown as CanvasImageSource;
+
+  it('draws the address when siteLabel is set', () => {
+    const { ctx, texts } = fakeCtx();
+    drawStoryCard(ctx, { level: lvl('boxer'), percent: 62, siteLabel: 'example.org', characterImg: img });
+    expect(texts).toContain('example.org');
+  });
+
+  it('draws no address line when siteLabel is blank', () => {
+    const { ctx, texts } = fakeCtx();
+    drawStoryCard(ctx, { level: lvl('boxer'), percent: 62, siteLabel: '', characterImg: img });
+    expect(texts.filter((t) => !t.trim())).toEqual([]);
+    expect(texts.length).toBeGreaterThan(3);
+  });
+});
+
+describe('emoji fallback', () => {
+  it('a glyph that measures and renders like the tofu reference is missing', () => {
+    const { ctx } = fakeCtx(() => 50, () => [1, 2, 3, 255]);
+    expect(glyphMissing(ctx, '🫏')).toBe(true);
+    expect(cardEmoji(ctx, '🫏')).toBe('🐴');
+  });
+
+  it('a glyph with its own width is present', () => {
+    const { ctx } = fakeCtx((t) => (t === '🫏' ? 64 : 50));
+    expect(glyphMissing(ctx, '🫏')).toBe(false);
+    expect(cardEmoji(ctx, '🫏')).toBe('🫏');
+  });
+
+  it('same width but different ink is present', () => {
+    const { ctx } = fakeCtx(() => 50, (t) => (t === '🫏' ? [200, 10, 10, 255] : [0, 0, 0, 255]));
+    expect(glyphMissing(ctx, '🫏')).toBe(false);
   });
 });
