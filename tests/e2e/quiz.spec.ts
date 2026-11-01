@@ -135,3 +135,36 @@ test('rewritten: Було/Стало scrolls into view after the answer', async 
   await page.getByTestId('conf-maybe').click();
   await expect(page.getByTestId('diff-after')).toBeInViewport();
 });
+
+test('feed-stop shows the press collage behind the question', async ({ page }) => {
+  await page.goto(H('farm'));
+  const bd = page.getByTestId('press-backdrop');
+  await expect(bd).toHaveAttribute('data-variant', 'noise');
+  await expect(bd).toHaveAttribute('aria-hidden', 'true');
+  expect(await bd.locator('[data-press-item]').count()).toBeGreaterThanOrEqual(5);
+  expect(await bd.evaluate((el) => getComputedStyle(el).pointerEvents)).toBe('none');
+  await page.getByTestId('option-a').click();
+  await expect(page.getByText('Наскільки ти впевнений?')).toBeVisible();
+});
+
+test('paper shows faded cuttings only at the margins', async ({ page }) => {
+  await page.goto(H('farm', 'paper'));
+  const bd = page.getByTestId('press-backdrop');
+  await expect(bd).toHaveAttribute('data-variant', 'margins');
+  const items = bd.locator('[data-press-item]');
+  const n = await items.count();
+  expect(n).toBeGreaterThanOrEqual(2);
+  const vw = page.viewportSize()!.width;
+  for (let i = 0; i < n; i++) {
+    const b = (await items.nth(i).boundingBox())!;
+    const cx = b.x + b.width / 2;
+    expect(cx < vw * 0.25 || cx > vw * 0.75, `item ${i} centre ${cx} of ${vw}`).toBe(true);
+  }
+});
+
+test('reduced motion freezes the collage', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto(H('farm'));
+  const first = page.getByTestId('press-backdrop').locator('[data-press-item]').first();
+  expect(await first.evaluate((el) => getComputedStyle(el).animationName)).toBe('none');
+});

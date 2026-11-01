@@ -109,7 +109,7 @@
     <Feed clipSet={feedRound.clipSet} onevent={(e) => (feedEvents = [...feedEvents, e])} ondone={onfeedDone} />
   {/key}
 {:else if stage === 'stop1' || stage === 'reality'}
-  <QuestionScreen question={questions[qIndex]} {theme} index={qIndex} total={questions.length} herdLabel={content.ui.herdPicked} {onanswer} />
+  <QuestionScreen question={questions[qIndex]} {theme} index={qIndex} total={questions.length} herdLabel={content.ui.herdPicked} press={content.press} {onanswer} />
 {:else if stage === 'reveal'}
   <Reveal ui={content.ui} oncontinue={() => go('verdict')} />
 {:else if result && level}

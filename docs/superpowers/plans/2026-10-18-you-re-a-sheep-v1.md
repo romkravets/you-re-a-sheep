@@ -92,6 +92,8 @@ Spec §13 «Етап 0». The pilot is the **first slice of v1**, built from the
 | 12 Verdict | `Reveal` and the level spread only (items 1–2 of the content order) plus «Пройти ще раз». |
 | 15 Content | Pilot content only: `ui.json`, `levels.json` (all 5, exit plans may be empty), `patterns.json`, and `episodes/pilot.json` with the set and questions above. |
 
+**Added after the pilot build (2026-11-01):** a press backdrop behind question screens — `src/quiz/PressBackdrop.svelte` (`noise` behind «Стоп», `margins` on paper), content in `content/uk/press.json` (`PressItem`, `*word*` = red accent via `src/quiz/press.ts`), tests in `tests/unit/press.test.ts` and `tests/e2e/quiz.spec.ts`.
+
 Skipped until after the class test: Tasks 5, 6, 7, 9, 13, 14, 16, 17, 18, and round 2.
 
 **Done when:** `npm test` and `npx playwright test flow quiz feed` pass; `npm run dev -- --host` opens the pilot on a phone in the same Wi-Fi; a passive user (never touches anything except answers) reaches the verdict in under 4 minutes.

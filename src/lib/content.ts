@@ -1,4 +1,4 @@
-import type { Content, Episode, Level, Fact, Pattern, Question, Round3Type, Skill } from './types';
+import type { Content, Episode, Level, Fact, Pattern, PressItem, Question, Round3Type, Skill } from './types';
 
 const SKILLS: Skill[] = ['detail', 'source', 'herd', 'motive'];
 const ROUND3_TYPES: Round3Type[] = ['fake-or-true', 'answer-in-front', 'headline-vs-text',
@@ -156,6 +156,7 @@ export function loadContent(): Content {
     levels: fromFile<Level[]>('levels', []),
     facts: fromFile<Fact[]>('facts', []),
     patterns: fromFile<Pattern[]>('patterns', []),
+    press: fromFile<PressItem[]>('press', []),
     episodes,
   };
 }
