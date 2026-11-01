@@ -44,22 +44,31 @@
   const level = $derived(result ? levelFor(result.percent, content.levels) : undefined);
   const theme = $derived(stage === 'reality' ? 'paper' : 'feed-stop');
 
-  // Back is held only mid-test by a single guard entry on top of the page's own entry.
-  // Leaving the test removes the guard, so Back then behaves like on any other page.
+  // Back is held only mid-test by TWO guard entries on top of the page's own entry, so even two
+  // quick presses (the second landing before popstate re-arms) stay on the page. Each entry knows
+  // its height `n`; popstate tops the stack back up to GUARD_DEPTH from wherever Back landed.
+  // Leaving the test walks back to the page's own entry, so Back then behaves like on any other page.
   const TRAPPED: Stage[] = ['feed1', 'stop1', 'reality'];
+  const GUARD_DEPTH = 2;
   let guarded = false;
-  let ignoreNextPop = false;
 
+  /** How many guard entries sit below and at the current one (0 = the page's own entry). */
+  function height(): number {
+    const st = history.state as { guard?: boolean; n?: number } | null;
+    return st?.guard ? (st.n ?? 1) : 0; // entries without n: the older single-guard format
+  }
+  function topUp() {
+    for (let n = height() + 1; n <= GUARD_DEPTH; n++) history.pushState({ guard: true, n }, '');
+  }
   function guard() {
-    if (guarded) return;
-    history.pushState({ guard: true }, '');
     guarded = true;
+    topUp();
   }
   function unguard() {
     if (!guarded) return;
     guarded = false;
-    ignoreNextPop = true;
-    history.back();
+    const h = height();
+    if (h > 0) history.go(-h);
   }
 
   function go(next: Stage) {
@@ -115,12 +124,12 @@
   }
 
   onMount(() => {
-    // After a reload mid-test we may already sit on our guard entry.
-    if ((history.state as { guard?: boolean } | null)?.guard) guarded = true;
-    else guard();
+    // After a reload mid-test we may already sit on a guard entry: guard() only tops it up.
+    guard();
+    // Read where Back actually landed (history.state), not the event, so several queued pops
+    // re-arm correctly; when no longer guarded (unguard's own go(-h)) this does nothing.
     const onpop = () => {
-      if (ignoreNextPop) { ignoreNextPop = false; return; }
-      if (guarded && TRAPPED.includes(stage)) history.pushState({ guard: true }, '');
+      if (guarded && TRAPPED.includes(stage)) topUp();
     };
     window.addEventListener('popstate', onpop);
     return () => {
