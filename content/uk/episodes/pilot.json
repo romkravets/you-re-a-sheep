@@ -14,11 +14,11 @@
           "mp4": "/clips/p1-cats.mp4",
           "poster": "/clips/p1-cats.jpg",
           "handle": "murchyk.i.ko",
-          "caption": "коробка одна. хто перший сів — того й коробка 📦😤 #коти #котики #fyp",
+          "caption": "одна миска на трьох, і всі вдають, що так і задумано 😤 #коти #котики #fyp",
           "likes": "48.2K",
           "comments": "612",
           "shares": "3.1K",
-          "license": { "source": "placeholder", "url": "https://example.com", "license": "placeholder" }
+          "license": { "source": "ウィキ太郎, Wikimedia Commons", "url": "https://commons.wikimedia.org/wiki/File:A_male_cat_grooms_a_female_kitten_2021-08-25_August_25.webm", "license": "PD" }
         },
         {
           "id": "p1-fake",
@@ -32,19 +32,19 @@
           "shares": "15.9K",
           "overlay": "ТЕРМІНОВО‼️ З понеділка ВСІ месенджери вимикають на 3 дні. Перешли своїм, поки не видалили!!!",
           "trap": "fake",
-          "license": { "source": "placeholder", "url": "https://example.com", "license": "placeholder" }
+          "license": { "source": "Kissmykumbaya, Wikimedia Commons", "url": "https://commons.wikimedia.org/wiki/File:A_quick_drive_through_Cabo_San_Lucas_at_night._Timelapse.webm", "license": "CC0" }
         },
         {
           "id": "p1-dog",
           "webm": "/clips/p1-dog.webm",
           "mp4": "/clips/p1-dog.mp4",
           "poster": "/clips/p1-dog.jpg",
-          "handle": "barsik_skate",
-          "caption": "він катається краще за мене і мені не соромно 🛹🐶 #пес #скейт",
+          "handle": "lisovi.istorii",
+          "caption": "мама купає малого, а він вдає, що його тут нема 😭🐺 #тварини #вовк #мило",
           "likes": "103K",
           "comments": "1.8K",
           "shares": "7.4K",
-          "license": { "source": "placeholder", "url": "https://example.com", "license": "placeholder" }
+          "license": { "source": "Kelly Sellers / Land Between the Lakes (USDA Forest Service), Wikimedia Commons", "url": "https://commons.wikimedia.org/wiki/File:Pup_Bathing.webm", "license": "PD" }
         },
         {
           "id": "p1-clickbait",
@@ -58,7 +58,7 @@
           "shares": "11.2K",
           "overlay": "ВЧЕНІ В ШОЦІ 😱 Морозиво щодня = +7 років життя (дослідження на 9 хом'яках)",
           "trap": "clickbait",
-          "license": { "source": "placeholder", "url": "https://example.com", "license": "placeholder" }
+          "license": { "source": "Fancibaer, Wikimedia Commons", "url": "https://commons.wikimedia.org/wiki/File:Oreo_Enjoying_A_Frosty_Paws_Cold_Treat.webm", "license": "CC0" }
         },
         {
           "id": "p1-rage",
@@ -72,7 +72,7 @@
           "shares": "32.8K",
           "overlay": "Водій НАВМИСНО облив дітей з калюжі біля школи — і ще й сміявся 🤬",
           "trap": "rage",
-          "license": { "source": "placeholder", "url": "https://example.com", "license": "placeholder" }
+          "license": { "source": "AnRo0002, Wikimedia Commons", "url": "https://commons.wikimedia.org/wiki/File:20160208Hockenheim1.ogv", "license": "CC0" }
         },
         {
           "id": "p1-rink",
@@ -85,7 +85,7 @@
           "comments": "214",
           "shares": "980",
           "overlay": "Каток у центральному парку відкривається 1 грудня 🎉 Вхід для школярів — безкоштовний ⛸️",
-          "license": { "source": "placeholder", "url": "https://example.com", "license": "placeholder" }
+          "license": { "source": "Zarateman, Wikimedia Commons", "url": "https://commons.wikimedia.org/wiki/File:Vitoria_-_Parque_de_la_Florid,_Navidad_2023_(2).webm", "license": "CC0" }
         },
         {
           "id": "p1-ad",
@@ -113,7 +113,7 @@
           "shares": "19.4K",
           "overlay": "ФАКТ, ЯКИЙ ЗЛАМАЄ ТОБІ МОЗОК 🤯 У восьминога ТРИ серця і БЛАКИТНА кров 🐙",
           "trap": "real",
-          "license": { "source": "placeholder", "url": "https://example.com", "license": "placeholder" }
+          "license": { "source": "MartinThoma, Wikimedia Commons", "url": "https://commons.wikimedia.org/wiki/File:Sealife-Munich-Octopus.ogv", "license": "CC0" }
         }
       ]
     }
@@ -122,15 +122,15 @@
     {
       "id": "pilot-cats",
       "type": "recall",
-      "prompt": "Скільки котів було у відео з коробкою?",
+      "prompt": "Скільки котів було у відео з мискою?",
       "options": [
-        { "id": "a", "text": "Один" },
-        { "id": "b", "text": "Два" },
-        { "id": "c", "text": "Три" }
+        { "id": "a", "text": "Два" },
+        { "id": "b", "text": "Три" },
+        { "id": "c", "text": "Чотири" }
       ],
       "correct": "b",
       "skill": "detail",
-      "explanation": "Два коти. Стрічка привчає ловити настрій ролика, а не те, що в кадрі: «щось про котиків» запам'ятати легко, а скільки їх було — значно важче.",
+      "explanation": "Три коти. Стрічка привчає ловити настрій ролика, а не те, що в кадрі: «щось про котиків» запам'ятати легко, а скільки їх було — значно важче.",
       "verdictLine": "Ти не порахував котів, на яких дивився."
     },
     {
