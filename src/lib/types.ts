@@ -53,7 +53,10 @@ export interface Content { ui: Record<string, string>; levels: Level[]; facts: F
   press: PressItem[]; episodes: Episode[] }
 
 // runtime
-export type FeedEvent = { kind: 'like' | 'share'; clipId: string } | { kind: 'dwell'; clipId: string; ms: number };
+export type FeedEvent =
+  | { kind: 'like' | 'share'; clipId: string }
+  /** `auto`: the feed moved on by itself, so the time on the clip says nothing about the user. */
+  | { kind: 'dwell'; clipId: string; ms: number; auto?: boolean };
 export interface Answer { questionId: string; chosen: Option['id']; confidence: Confidence; whyChosen?: Option['id']; moreTime?: boolean }
 export interface SessionRound { kind: 'feed'; clipSet: ClipSet; questions: Question[] }
 export interface RealityRound { kind: 'reality'; questions: Question[] }

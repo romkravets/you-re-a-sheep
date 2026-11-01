@@ -264,3 +264,16 @@ export function stopStandIn(feedFrame: Frame | null, screen?: HTMLElement | null
   }
   return frame;
 }
+
+/**
+ * Frees a frame's backing store (a full-screen canvas at up to 2× is several MB on a phone) once
+ * nothing draws from it. `inUse` is a frame still on screen — if it is this one, it is kept.
+ * Returns null so callers can write `frame = releaseFrame(frame)`.
+ */
+export function releaseFrame(frame: Frame | null, inUse?: Frame | null): null {
+  if (frame && frame !== inUse) {
+    frame.canvas.width = 0;
+    frame.canvas.height = 0;
+  }
+  return null;
+}

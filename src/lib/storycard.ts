@@ -25,12 +25,18 @@ export function cardText(level: Level, percent: number): CardText {
 
 export interface CardData { level: Level; percent: number; siteLabel: string; characterImg?: CanvasImageSource }
 
-/** Waits (at most ~3 s) for the poster face with Cyrillic glyphs; the card still draws on fallback fonts. */
+/** Every kind of glyph the card sets: Cyrillic, Latin, digits and the poster punctuation. */
+const CARD_SAMPLE = 'ЯЇЄҐяїєґ abc 0123456789 %—→!.,?«»';
+
+/**
+ * Waits (at most ~3 s) for the poster face, both its Cyrillic and its Latin subset (digits, «%», «—»,
+ * «→» live there); the card still draws on fallback fonts.
+ */
 export async function prepareCardFonts(): Promise<void> {
   if (typeof document === 'undefined' || !document.fonts) return;
   const load = Promise.all([
-    document.fonts.load(`900 64px ${POSTER}`, 'ЯЇЄҐ%'),
-    document.fonts.load(`400 40px ${POSTER}`, 'abc.'),
+    document.fonts.load(`900 64px ${POSTER}`, CARD_SAMPLE),
+    document.fonts.load(`400 40px ${POSTER}`, CARD_SAMPLE),
   ]).catch(() => undefined);
   await Promise.race([load, new Promise((r) => setTimeout(r, 3000))]);
 }
@@ -105,11 +111,13 @@ export function drawStoryCard(ctx: CanvasRenderingContext2D, d: CardData): void 
   });
   y += sloH + 20 + 62; // + the 2° tilt's drop at the right edge
 
-  // Site address, kept above the bottom ~300 px.
-  ctx.font = `400 42px ${POSTER}`;
-  if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
-  ctx.fillStyle = BLACK;
-  ctx.fillText(d.siteLabel, cx, Math.min(y, CARD_H - 300));
+  // Site address, kept above the bottom ~300 px; no line at all while there is no address.
+  if (d.siteLabel.trim()) {
+    ctx.font = `400 42px ${POSTER}`;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
+    ctx.fillStyle = BLACK;
+    ctx.fillText(d.siteLabel, cx, Math.min(y, CARD_H - 300));
+  }
 
   // Footer strip (sits under the story reply bar; nothing important here).
   ctx.fillStyle = RED;
@@ -207,11 +215,49 @@ function character(ctx: CanvasRenderingContext2D, d: CardData, cx: number, cy: n
   o.textAlign = 'center';
   o.textBaseline = 'middle';
   o.font = `${Math.round(s * 0.76)}px ${EMOJI}`;
-  o.fillText(d.level.emoji, s / 2, s * 0.53);
+  o.fillText(probeEmoji(d.level.emoji), s / 2, s * 0.53);
   o.globalCompositeOperation = 'source-in';
   o.fillStyle = BLACK;
   o.fillRect(0, 0, s, s);
   ctx.drawImage(off, cx - s / 2, cy - s / 2);
+}
+
+/** A codepoint no font draws: whatever the browser paints for it is its «tofu». */
+const TOFU = '\u{10FFFD}';
+const PROBE = 64;
+/** Stands in for an emoji the phone's font doesn't have yet (🫏 is Unicode 15, 2022). */
+const FALLBACK_EMOJI = '🐴';
+
+function ink(ctx: CanvasRenderingContext2D, ch: string): string {
+  ctx.clearRect(0, 0, PROBE, PROBE);
+  ctx.fillText(ch, PROBE / 2, PROBE / 2);
+  return Array.from(ctx.getImageData(0, 0, PROBE, PROBE).data).join(',');
+}
+
+/** True when `ch` comes out as the same box as a codepoint no font has: same width, same ink. */
+export function glyphMissing(ctx: CanvasRenderingContext2D, ch: string): boolean {
+  try {
+    ctx.font = `48px ${EMOJI}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = BLACK;
+    if (ctx.measureText(ch).width !== ctx.measureText(TOFU).width) return false;
+    return ink(ctx, ch) === ink(ctx, TOFU);
+  } catch {
+    return false;
+  }
+}
+
+/** The level's emoji, or 🐴 when this device would draw it as tofu. `ctx` is a ≥64 px scratch canvas. */
+export function cardEmoji(ctx: CanvasRenderingContext2D, emoji: string): string {
+  return glyphMissing(ctx, emoji) ? FALLBACK_EMOJI : emoji;
+}
+
+function probeEmoji(emoji: string): string {
+  const c = document.createElement('canvas');
+  c.width = PROBE; c.height = PROBE;
+  const p = c.getContext('2d', { willReadFrequently: true });
+  return p ? cardEmoji(p, emoji) : emoji;
 }
 
 function band(ctx: CanvasRenderingContext2D, cy: number, h: number, deg: number, fill: string, inner: () => void) {

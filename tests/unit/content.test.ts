@@ -189,6 +189,26 @@ describe('validateContent', () => {
     expect(realQ.source!.url).toMatch(/^https:\/\//);
   });
 
+  it('round-2 fake question: the news is checkable once you know who and where', () => {
+    const pilot = loadContent().episodes.find((e) => e.id === 'pilot')!;
+    const x = pilot.questions.find((y) => y.id === 'pilot-r2-snow')!;
+    expect(x.prompt).toBe('Новина про дистанційку через снігопад. Що з нею не так?');
+    const right = x.options.find((o) => o.id === x.correct)!.text;
+    expect(right).toMatch(/яке місто/);
+    expect(right).toMatch(/чутка/);
+    const wrong = x.options.filter((o) => o.id !== x.correct).map((o) => o.text);
+    expect(wrong).toEqual(expect.arrayContaining(['Вона написана надто спокійно для правди', 'Нічого: сніг справді йде, отже й дистанційка правда']));
+    expect(x.explanation).not.toMatch(/без дати/); // the overlay does say «з понеділка»
+    expect(x.explanation.split(/(?<=[.!?])\s+/).filter(Boolean).length).toBeLessThanOrEqual(2);
+  });
+
+  it('bees explanation credits the other two ethologists, in at most 2 sentences', () => {
+    const pilot = loadContent().episodes.find((e) => e.id === 'pilot')!;
+    const x = pilot.questions.find((y) => y.id === 'pilot-r2-bees')!;
+    expect(x.explanation).toContain('разом з двома іншими дослідниками поведінки тварин');
+    expect(x.explanation.split(/(?<=[.!?])\s+/).filter(Boolean).length).toBeLessThanOrEqual(2);
+  });
+
   it('explanations read well after a right answer too (no «you failed» phrasing)', () => {
     const failed = /тебе (підштовхнул|надурил|обдурил)|в пам'яті лишилось|ти не помітив|ти дивився/i;
     for (const x of qs(loadContent())) expect(x.explanation, x.id).not.toMatch(failed);

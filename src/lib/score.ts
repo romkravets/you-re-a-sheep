@@ -93,7 +93,10 @@ export function scoreRun(session: Session, answers: Answer[], feedEvents: FeedEv
   if (sharedTrap('fake')) feedLines.push('Ти переслав фейк.');
   if (sharedTrap('rage')) feedLines.push('Тебе розлютили — і ти поширив.');
   if (feedEvents.some((e) => e.kind === 'like' && clips.get(e.clipId)?.trap === 'clickbait')) feedLines.push('Ти лайкнув клікбейт.');
-  if (feedEvents.some((e) => e.kind === 'dwell' && e.ms >= 3000 && ['clickbait', 'ad'].includes(clips.get(e.clipId)?.trap ?? ''))) {
+  if (sharedTrap('ad')) feedLines.push('Ти поширив рекламу, що прикидалась порадою.');
+  else if (feedEvents.some((e) => e.kind === 'like' && clips.get(e.clipId)?.trap === 'ad')) feedLines.push('Ти лайкнув рекламу, що прикидалась порадою.');
+  // Only a manual leave counts: a passive user whom the feed auto-advanced didn't «hang» on anything.
+  if (feedEvents.some((e) => e.kind === 'dwell' && !e.auto && e.ms >= 3000 && ['clickbait', 'ad'].includes(clips.get(e.clipId)?.trap ?? ''))) {
     feedLines.push('Ти завис на клікбейті.');
   }
   const lines: string[] = [];

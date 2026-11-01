@@ -10,12 +10,21 @@ test('canvas renders 1080×1920 non-blank', async ({ page }) => {
     const c = document.getElementById('card') as HTMLCanvasElement;
     const ctx = c.getContext('2d')!;
     const px = (x: number, y: number) => [...ctx.getImageData(x, y, 1, 1).data];
-    return { w: c.width, h: c.height, top: px(540, 200), bottom: px(540, 1900), fontOk: document.fonts.check('900 64px Unbounded', 'Я') };
+    return { w: c.width, h: c.height, top: px(540, 200), bottom: px(540, 1900), fontOk: document.fonts.check('900 64px Unbounded', 'Я'), digitsOk: document.fonts.check('900 40px Unbounded', '73% —→!'),
+      // digits and «%» really come from Unbounded, not from the fallback face
+      digitsDrawn: ['73%', '0123456789', '—!.'].every((t) => {
+        ctx.font = '900 40px Unbounded, monospace';
+        const own = ctx.measureText(t).width;
+        ctx.font = '900 40px monospace';
+        return Math.abs(own - ctx.measureText(t).width) > 1;
+      }) };
   });
   expect(r.w).toBe(1080);
   expect(r.h).toBe(1920);
   expect(r.top).not.toEqual(r.bottom);
   expect(r.fontOk).toBe(true);
+  expect(r.digitsOk).toBe(true);
+  expect(r.digitsDrawn).toBe(true);
 });
 
 async function openVerdict(page: Page) {
@@ -56,4 +65,5 @@ test('«Кинути виклик» downloads the card PNG without Web Share', a
   await page.getByRole('button', { name: ui.challenge }).click();
   expect((await download).suggestedFilename()).toBe('you-re-a-sheep-boxer.png');
   await expect(page.getByTestId('challenge-status')).toHaveText(ui.challengeSaved);
+  expect(ui.challengeSaved).toBe('Картку збережено. Якщо не бачиш її — відкрий тест у звичайному браузері.');
 });
