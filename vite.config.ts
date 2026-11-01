@@ -14,6 +14,7 @@ export default defineConfig(({ mode }) => ({
         ...(mode === 'test' ? { 'feed-harness': resolve(import.meta.dirname, 'tests/e2e/feed-harness.html') } : {}),
         ...(mode === 'test' ? { 'verdict-harness': resolve(import.meta.dirname, 'tests/e2e/verdict-harness.html') } : {}),
         ...(mode === 'test' ? { 'crack-harness': resolve(import.meta.dirname, 'tests/e2e/crack-harness.html') } : {}),
+        ...(mode === 'test' ? { 'storycard-harness': resolve(import.meta.dirname, 'tests/e2e/storycard-harness.html') } : {}),
         ...(mode === 'test' ? { 'quiz-harness': resolve(import.meta.dirname, 'tests/e2e/quiz-harness.html') } : {}),
       },
     },
