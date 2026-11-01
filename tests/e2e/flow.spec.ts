@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 
 const FEED_MS = 8 * 4500 + 2000;
+const FEED2_MS = 6 * 4500 + 2000;
 const LEVELS = /Вівця|Моллі|Боксер|Бенджамін|Орвелл/;
 
 async function answerOne(page: Page) {
@@ -19,9 +20,17 @@ async function toStop1(page: Page) {
   await expect(page.getByTestId('question-screen')).toBeVisible();
 }
 
-async function toReality(page: Page) {
+async function toStop2(page: Page) {
   await toStop1(page);
   for (let i = 0; i < 3; i++) await answerOne(page);
+  await expect(page.getByTestId('feed')).toBeVisible();
+  await page.clock.runFor(FEED2_MS);
+  await expect(page.getByTestId('question-screen')).toBeVisible();
+}
+
+async function toReality(page: Page) {
+  await toStop2(page);
+  for (let i = 0; i < 2; i++) await answerOne(page);
   await page.clock.runFor(700);
   await expect(page.getByTestId('question-screen')).toHaveClass(/paper/);
 }
@@ -106,6 +115,11 @@ test('feed traps do not move the meter during the feed and reach the verdict', a
   await expect(page.getByTestId('question-screen')).toBeVisible();
   await expect(meter).not.toHaveAttribute('aria-valuenow', '0');
   for (let i = 0; i < 3; i++) await answerOne(page);
+  await expect(page.getByTestId('feed')).toBeVisible();
+  await expect(meter).not.toHaveAttribute('aria-valuenow', '0');
+  await page.clock.runFor(FEED2_MS);
+  await expect(page.getByTestId('question-screen')).toBeVisible();
+  for (let i = 0; i < 2; i++) await answerOne(page);
   await page.clock.runFor(700);
   await expect(page.getByTestId('question-screen')).toHaveClass(/paper/);
   for (let i = 0; i < 3; i++) await answerOne(page);
@@ -122,8 +136,8 @@ test('retry starts a new run from the feed', async ({ page }) => {
 });
 
 test('the «Стоп» screen shatters onto paper that is already there', async ({ page }) => {
-  await toStop1(page);
-  for (let i = 0; i < 3; i++) await answerOne(page);
+  await toStop2(page);
+  for (let i = 0; i < 2; i++) await answerOne(page);
   await expect(page.getByTestId('crack-canvas')).toBeAttached();
   await expect(page.getByTestId('question-screen')).toHaveClass(/paper/);
   await page.clock.runFor(1500);
@@ -131,12 +145,49 @@ test('the «Стоп» screen shatters onto paper that is already there', async 
 });
 
 test('three quick Backs during the shatter onto paper still stay', async ({ page }) => {
-  await toStop1(page);
-  for (let i = 0; i < 3; i++) await answerOne(page);
+  await toStop2(page);
+  for (let i = 0; i < 2; i++) await answerOne(page);
   await expect(page.getByTestId('crack-canvas')).toBeAttached();
   await page.goBack();
   await page.goBack();
   await page.goBack();
   await expect(page.getByTestId('question-screen')).toHaveClass(/paper/);
   expect(new URL(page.url()).origin).toBe('http://localhost:4173');
+});
+
+test('round 2 shows 6 clips then «Стоп» with 2 questions', async ({ page }) => {
+  await toStop1(page);
+  for (let i = 0; i < 3; i++) await answerOne(page);
+  await expect(page.getByTestId('feed')).toBeVisible();
+  await expect(page.locator('[data-testid^="clip-r2-"]')).toHaveCount(6);
+  await expect(page.locator('[data-testid^="clip-p1-"]')).toHaveCount(0);
+  await page.clock.runFor(FEED2_MS);
+  await expect(page.getByTestId('question-screen')).toBeVisible();
+  await expect(page.getByTestId('question-screen')).not.toHaveClass(/paper/);
+  await expect(page.getByTestId('question-screen')).toContainText('1 / 2');
+  await answerOne(page);
+  await expect(page.getByTestId('question-screen')).toContainText('2 / 2');
+});
+
+test('shatter happens only after the last Стоп', async ({ page }) => {
+  await toStop1(page);
+  // The feed-end flash is over before the questions are answered.
+  await page.clock.runFor(1500);
+  await expect(page.getByTestId('crack-canvas')).toHaveCount(0);
+  for (let i = 0; i < 3; i++) await answerOne(page);
+  await expect(page.getByTestId('feed')).toBeVisible();
+  await expect(page.getByTestId('crack-canvas')).toHaveCount(0);
+  await page.clock.runFor(FEED2_MS);
+  await expect(page.getByTestId('question-screen')).toBeVisible();
+  await page.clock.runFor(1500);
+  await answerOne(page);
+  await expect(page.getByTestId('crack-canvas')).toHaveCount(0);
+  await answerOne(page);
+  await expect(page.getByTestId('crack-canvas')).toBeAttached();
+  await expect(page.getByTestId('question-screen')).toHaveClass(/paper/);
+});
+
+test('both feeds together stay under 4 minutes (14 clips x 4.5 s)', () => {
+  expect(14 * 4.5).toBeCloseTo(63, 0);
+  expect(FEED_MS + FEED2_MS).toBeLessThan(4 * 60 * 1000);
 });

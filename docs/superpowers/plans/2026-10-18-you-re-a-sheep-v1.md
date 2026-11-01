@@ -73,7 +73,7 @@ It also ships teacher, about and privacy pages.
 
 Spec §13 «Етап 0». The pilot is the **first slice of v1**, built from the tasks below, not a throwaway prototype. When it is done, stop and hand it to the owner for a class test. The rest of v1 continues from the same code.
 
-**Pilot run:** `feed1 → stop1 → reality (3 questions) → reveal → verdict`.
+**Pilot run:** `feed1 → stop1 → feed2 → stop2 → reality (3 questions) → reveal → verdict` (round 2: 6 clips + 2 questions, plain cut back into the feed, the shatter only after the last «Стоп»; 14 clips x 4.5 s ≈ 63 s of feed).
 - One round-1 clip set: 8 placeholder clips, with traps `fake`, `clickbait`, `ad`, `rage`, one `real`, and the `rewrite` post. 3 bound questions at `stop1`.
 - Reality: the set's `rewritten` question, one `herd` and one `farm`, in that order.
 - Verdict: `Reveal`, then level (emoji instead of engraving), percent, «Твій шаблон», verdict lines, «Це не IQ-тест. Це дзеркало.», «Пройти ще раз».

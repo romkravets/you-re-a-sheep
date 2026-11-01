@@ -15,7 +15,7 @@
   interface Props { content: Content }
   let { content }: Props = $props();
 
-  type Stage = 'feed1' | 'stop1' | 'reality' | 'reveal' | 'verdict';
+  type Stage = 'feed1' | 'stop1' | 'feed2' | 'stop2' | 'reality' | 'reveal' | 'verdict';
 
   function newSeed(first: boolean): number {
     if (first && import.meta.env.MODE === 'test') {
@@ -29,17 +29,23 @@
   let session: Session = $state(start(true));
   let stage = $state<Stage>('feed1');
   let answers: Answer[] = $state([]);
-  let feedEvents: FeedEvent[] = $state([]);
+  let feed1Events: FeedEvent[] = $state([]);
+  let feed2Events: FeedEvent[] = $state([]);
   let qIndex = $state(0);
   // The glass shatter over a stage change; the next stage is already rendered underneath.
   let crack = $state<{ variant: CrackVariant; source: Frame | null; impact: { x: number; y: number } } | null>(null);
   let lastFeedFrame: Frame | null = null;
 
-  const round = $derived(stage === 'stop1' ? session.rounds[0] : session.rounds[session.rounds.length - 1]);
-  const feedRound = $derived(session.rounds[0]);
+  const round = $derived(
+    stage === 'stop1' ? session.rounds[0] : stage === 'stop2' ? session.rounds[1] : session.rounds[session.rounds.length - 1],
+  );
+  const hasRound2 = $derived(session.rounds.length === 3);
+  const feedRound = $derived(stage === 'feed2' ? session.rounds[1] : session.rounds[0]);
+  const feedEvents = $derived([...feed1Events, ...feed2Events]);
   const questions = $derived(round.questions);
-  // Feed penalties reach the meter only after the feed ends, so it cannot flag a trap live.
-  const meter = $derived(sheepMeter(session, answers, stage === 'feed1' ? [] : feedEvents));
+  // A feed's penalties reach the meter only once its «Стоп» begins, so it cannot flag a trap live.
+  const meterEvents = $derived(stage === 'feed1' ? [] : stage === 'stop1' || stage === 'feed2' ? feed1Events : feedEvents);
+  const meter = $derived(sheepMeter(session, answers, meterEvents));
   const result = $derived(stage === 'reveal' || stage === 'verdict' ? scoreRun(session, answers, feedEvents, content) : undefined);
   const level = $derived(result ? levelFor(result.percent, content.levels) : undefined);
   const theme = $derived(stage === 'reality' ? 'paper' : 'feed-stop');
@@ -48,7 +54,7 @@
   // quick presses (the second landing before popstate re-arms) stay on the page. Each entry knows
   // its height `n`; popstate tops the stack back up to GUARD_DEPTH from wherever Back landed.
   // Leaving the test walks back to the page's own entry, so Back then behaves like on any other page.
-  const TRAPPED: Stage[] = ['feed1', 'stop1', 'reality'];
+  const TRAPPED: Stage[] = ['feed1', 'stop1', 'feed2', 'stop2', 'reality'];
   const GUARD_DEPTH = 2;
   let guarded = false;
 
@@ -83,7 +89,7 @@
     // Snapshot the last clip now: the feed unmounts as soon as the stage changes.
     lastFeedFrame = safe(() => snapshotFeed(document.querySelector<HTMLElement>('[data-testid="feed"]')));
     shatter('stop', lastFeedFrame);
-    go('stop1');
+    go(stage === 'feed1' ? 'stop1' : 'stop2');
   }
 
   function safe(draw: () => Frame | null): Frame | null {
@@ -106,7 +112,12 @@
       qIndex += 1;
       return;
     }
-    if (stage === 'stop1') {
+    if (stage === 'stop1' && hasRound2) {
+      // Plain cut back into the feed: no shatter until the last «Стоп».
+      go('feed2');
+      return;
+    }
+    if (stage === 'stop1' || stage === 'stop2') {
       // «Стоп» is DOM text: break a stand-in of it, with the paper already rendered underneath.
       shatter('feed-to-paper', safe(() => stopStandIn(lastFeedFrame, document.querySelector<HTMLElement>('[data-testid="question-screen"]'))));
       go('reality');
@@ -119,7 +130,8 @@
     lastFeedFrame = null;
     session = start(false);
     answers = [];
-    feedEvents = [];
+    feed1Events = [];
+    feed2Events = [];
     go('feed1');
   }
 
@@ -138,11 +150,15 @@
   });
 </script>
 
-{#if stage === 'feed1' && feedRound.kind === 'feed'}
-  {#key session.seed}
-    <Feed clipSet={feedRound.clipSet} onevent={(e) => (feedEvents = [...feedEvents, e])} ondone={onfeedDone} />
+{#if (stage === 'feed1' || stage === 'feed2') && feedRound.kind === 'feed'}
+  {#key `${session.seed}-${stage}`}
+    <Feed
+      clipSet={feedRound.clipSet}
+      onevent={(e) => (stage === 'feed1' ? (feed1Events = [...feed1Events, e]) : (feed2Events = [...feed2Events, e]))}
+      ondone={onfeedDone}
+    />
   {/key}
-{:else if stage === 'stop1' || stage === 'reality'}
+{:else if stage === 'stop1' || stage === 'stop2' || stage === 'reality'}
   <QuestionScreen question={questions[qIndex]} {theme} index={qIndex} total={questions.length} herdLabel={content.ui.herdPicked} press={content.press} {onanswer} />
 {:else if stage === 'reveal'}
   <Reveal ui={content.ui} oncontinue={() => go('verdict')} />

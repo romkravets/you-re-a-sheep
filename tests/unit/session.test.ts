@@ -166,4 +166,32 @@ describe('buildSession', () => {
     }
     expect(run(5)).toEqual(run(5));
   });
+
+  it('pilot session includes round 2 when available', () => {
+    const p = base();
+    const run = (seed: number) => buildSession(p, seed, new Set(), { pilot: true });
+    for (let seed = 0; seed < 20; seed++) {
+      const s = run(seed);
+      expect(s.rounds.map((r) => r.kind)).toEqual(['feed', 'feed', 'reality']);
+      const [r1, r2, rl] = s.rounds as [SessionRound, SessionRound, RealityRound];
+      expect([r1.clipSet.clips.length, r1.questions.length]).toEqual([8, 3]);
+      expect([r2.clipSet.round, r2.clipSet.clips.length, r2.questions.length]).toEqual([2, 6, 2]);
+      expect(rl.questions).toHaveLength(3);
+    }
+    expect(run(5)).toEqual(run(5));
+  });
+
+  it('pilot session without round-2 content stays two rounds', () => {
+    const p = base();
+    p.episodes[0].clipSets = p.episodes[0].clipSets.filter((s) => s.round === 1);
+    expect(buildSession(p, 1, new Set(), { pilot: true }).rounds).toHaveLength(2);
+  });
+
+  it('a full pilot run is 14 clips of 4.5 s, about a minute of feed', () => {
+    const s = buildSession(base(), 1, new Set(), { pilot: true });
+    const clips = (s.rounds as SessionRound[]).filter((r) => r.kind === 'feed').reduce((n, r) => n + r.clipSet.clips.length, 0);
+    expect(clips).toBe(14);
+    expect(clips * 4.5).toBeCloseTo(63, 0);
+    expect(clips * 4.5).toBeLessThan(240);
+  });
 });

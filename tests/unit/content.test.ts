@@ -152,7 +152,7 @@ describe('validateContent', () => {
     expect(validateContent(c)).toEqual([]);
     for (let seed = 1; seed <= 50; seed++) {
       const s = buildSession(c, seed, undefined, { pilot: true });
-      expect(s.rounds).toHaveLength(2);
+      expect(s.rounds).toHaveLength(3);
     }
   });
 
