@@ -99,7 +99,7 @@
           "shares": "2.7K",
           "overlay": "Прищі зникнуть за 5 днів БЕЗ кремів ✨ Мій метод — у курсі, посилання в описі профілю 👆",
           "trap": "ad",
-          "license": { "source": "placeholder", "url": "https://example.com", "license": "placeholder" }
+          "license": { "source": "власне: згенеровано scripts/make-ad-clip.py (без ШІ)", "url": "https://github.com/romkravets/you-re-a-sheep", "license": "own" }
         },
         {
           "id": "p1-real",
