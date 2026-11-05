@@ -122,6 +122,17 @@ describe('drawStoryCard', () => {
     expect(texts.filter((t) => !t.trim())).toEqual([]);
     expect(texts.length).toBeGreaterThan(3);
   });
+
+  it('without an address the stack moves down to keep the gap above the footer balanced', () => {
+    const kickerY = (siteLabel: string) => {
+      const ys: number[] = [];
+      const { ctx } = fakeCtx();
+      (ctx as unknown as Record<string, unknown>).fillText = (_t: string, _x: number, y: number) => ys.push(y);
+      drawStoryCard(ctx, { level: lvl('boxer'), percent: 62, siteLabel, characterImg: img });
+      return ys[0];
+    };
+    expect(kickerY('') - kickerY('example.org')).toBeGreaterThanOrEqual(40);
+  });
 });
 
 describe('emoji fallback', () => {

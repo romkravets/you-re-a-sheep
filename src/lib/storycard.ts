@@ -53,8 +53,10 @@ export function drawStoryCard(ctx: CanvasRenderingContext2D, d: CardData): void 
   rays(ctx);
   grain(ctx);
 
-  // Character on a sun disc.
-  const cx = CARD_W / 2, cy = 462, r = 190;
+  // Character on a sun disc. Without an address line the whole stack sits lower, splitting the
+  // freed ~100 px between the top and the gap above the footer.
+  const hasSite = Boolean(d.siteLabel.trim());
+  const cx = CARD_W / 2, cy = hasSite ? 462 : 512, r = 190;
   ctx.fillStyle = BLACK;
   circle(ctx, cx, cy, r + 16);
   ctx.fillStyle = CREAM;
@@ -112,7 +114,7 @@ export function drawStoryCard(ctx: CanvasRenderingContext2D, d: CardData): void 
   y += sloH + 20 + 62; // + the 2° tilt's drop at the right edge
 
   // Site address, kept above the bottom ~300 px; no line at all while there is no address.
-  if (d.siteLabel.trim()) {
+  if (hasSite) {
     ctx.font = `400 42px ${POSTER}`;
     if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
     ctx.fillStyle = BLACK;
